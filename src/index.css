@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: #1f2937;
+  background-color: #fafbfc;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* Professional Minimalistic Theme */
+  --primary: #334155;
+  --primary-hover: #475569;
+  --secondary: #64748b;
+  --accent: #0f172a;
+  --border: #e2e8f0;
+  --background: #fafbfc;
+  --surface: #ffffff;
+  --text-primary: #1f2937;
+  --text-secondary: #64748b;
+  --success: #10b981;
+  --error: #ef4444;
+}
+
+/* Spin Wheel Animation */
+@keyframes spinWheel {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1800deg); /* 5 full rotations */
+  }
+}
+
+.spin-animation {
+  animation: spinWheel 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Professional fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Custom utility classes */
+.font-jakarta {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Continuous Spinner Rotation */
+@keyframes spinnerRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-rotate {
+  animation: spinnerRotate 8s linear infinite;
+}
+
+/* Confetti Animation */
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg) scale(0.5);
+  }
+}
+
+.confetti-piece {
+  animation: confettiFall 3s ease-in forwards;
+  border-radius: 2px;
+}
+
