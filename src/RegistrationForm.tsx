@@ -1,6 +1,7 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useState } from 'react';
+import { API_ENDPOINTS } from './config/api';
 
 // Validation schema
 const registrationSchema = Yup.object().shape({
@@ -81,7 +82,7 @@ export default function RegistrationForm() {
         formData.append('image', values.userImage);
       }
 
-      const response = await fetch('http://localhost:5001/api/users/register', {
+      const response = await fetch(API_ENDPOINTS.USERS.REGISTER, {
         method: 'POST',
         body: formData,
       });

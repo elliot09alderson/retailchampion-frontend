@@ -15,7 +15,6 @@ export default function AdminLottery() {
   const [loading, setLoading] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [message, setMessage] = useState('');
-  const [spinResult, setSpinResult] = useState<any>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [winnerName, setWinnerName] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -97,7 +96,6 @@ export default function AdminLottery() {
         setLotteryId(newLotteryId);
         setEventName(data.data.eventName);
         setWinnerName(null);
-        setSpinResult(null);
         setShowConfetti(false);
         setTotalParticipants(0);
         
@@ -147,7 +145,6 @@ export default function AdminLottery() {
     // Start the spinning animation immediately
     setIsSpinning(true);
     setLoading(true);
-    setSpinResult(null);
     setWinnerName(null); // Reset winner
     setShowConfetti(false); // Reset confetti before spin
     
@@ -165,7 +162,6 @@ export default function AdminLottery() {
       
       if (data.success) {
         setMessage(`Round ${data.data.round} completed!`);
-        setSpinResult(data.data);
         
         // If lottery is complete, get the winner
         if (data.data.isComplete && data.data.winner) {

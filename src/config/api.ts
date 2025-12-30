@@ -1,8 +1,12 @@
 // API Configuration
-export const API_BASE_URL = 'http://localhost:5001';
+export const API_BASE_URL = 'http://retailchampions.com/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: `${API_BASE_URL}/api/auth/login`,
+    ME: `${API_BASE_URL}/api/auth/me`,
+  },
   LOTTERY: {
     CREATE: `${API_BASE_URL}/api/lottery/create`,
     ACTIVE: `${API_BASE_URL}/api/lottery/active`,
@@ -15,6 +19,7 @@ export const API_ENDPOINTS = {
   },
   USERS: {
     GET_ALL: `${API_BASE_URL}/api/users`,
+    REGISTER: `${API_BASE_URL}/api/users/register`,
     GET_BY_ID: (id: string) => `${API_BASE_URL}/api/users/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/users/${id}`,
   },
