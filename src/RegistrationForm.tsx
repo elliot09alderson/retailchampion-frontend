@@ -128,17 +128,24 @@ export default function RegistrationForm() {
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6">
+
+
       <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-2xl fade-in">
 
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-semibold text-[#0f172a] mb-2 tracking-tight">
-            Retail Champions
+
+          <h1 className="text-4xl md:text-6xl font-black text-[#0f172a] mb-3 tracking-tighter uppercase">
+            Retail <span className="text-blue-600 relative">Champions
+              <span className="absolute -bottom-1 left-0 w-full h-1.5 bg-blue-600/10 rounded-full -z-10"></span>
+            </span>
           </h1>
-          <p className="text-[#64748b] text-sm font-normal">
-            Complete your registration to get started
+
+          <p className="text-slate-400 text-xs md:text-sm font-black uppercase tracking-[0.3em] ml-1">
+            Official Participant Registration Portal
           </p>
+
         </div>
 
         {/* Form Container */}

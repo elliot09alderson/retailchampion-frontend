@@ -72,6 +72,35 @@ export default function AdminLottery() {
     }
   };
 
+  const handleSeedOnly = async (id: string) => {
+    const token = localStorage.getItem('token');
+    setMessage('Initializing contest participants...');
+    try {
+      const seedResponse = await fetch(API_ENDPOINTS.LOTTERY.SEED_PARTICIPANTS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          lotteryId: id,
+          count: requestedParticipantCount || undefined
+        }),
+      });
+      
+      const seedData = await seedResponse.json();
+      
+      if (seedData.success) {
+        setMessage(`Success! Loaded ${seedData.data.totalParticipants} participants.`);
+        fetchParticipants(id);
+      } else {
+        setMessage('Failed to load participants: ' + seedData.message);
+      }
+    } catch (err) {
+      setMessage('Network error while loading participants');
+    }
+  };
+
   const handleCreateLottery = async () => {
     if (!eventName.trim()) {
       setMessage('Please enter an event name');
@@ -81,6 +110,13 @@ export default function AdminLottery() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      
+      // If we already have a lotteryId but 0 participants, just seed it
+      if (lotteryId) {
+        await handleSeedOnly(lotteryId);
+        return;
+      }
+
       const response = await fetch(API_ENDPOINTS.LOTTERY.CREATE, {
         method: 'POST',
         headers: {
@@ -100,33 +136,7 @@ export default function AdminLottery() {
         setShowConfetti(false);
         setTotalParticipants(0);
         
-        // Automatically seed participants from database
-        setMessage('Contest created! Loading participants...');
-        
-        try {
-          const seedResponse = await fetch(API_ENDPOINTS.LOTTERY.SEED_PARTICIPANTS, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ 
-              lotteryId: newLotteryId,
-              count: requestedParticipantCount || undefined
-            }),
-          });
-          
-          const seedData = await seedResponse.json();
-          
-          if (seedData.success) {
-            setMessage(`Contest created with ${seedData.data.totalParticipants} participants!`);
-            fetchParticipants(newLotteryId);
-          } else {
-            setMessage('Contest created but failed to load participants');
-          }
-        } catch (seedErr) {
-          setMessage('Contest created but failed to load participants');
-        }
+        await handleSeedOnly(newLotteryId);
       } else {
         setMessage(data.message);
       }
@@ -135,6 +145,16 @@ export default function AdminLottery() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    setLotteryId(null);
+    setEventName('');
+    setParticipants([]);
+    setTotalParticipants(0);
+    setWinnerName(null);
+    setShowConfetti(false);
+    setMessage('Prepare for the next champion cycle.');
   };
 
   const handleExecuteSpin = async () => {
@@ -232,6 +252,8 @@ export default function AdminLottery() {
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">{user.name || 'Admin'}</p>
             </div>
           )}
+
+
           <button 
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-300"
@@ -384,10 +406,12 @@ export default function AdminLottery() {
                 />
               </div>
 
-              {/* Create Lottery Section */}
-              {!lotteryId && (
+              {/* Create Lottery Section - Show if no lottery OR if lottery is empty */}
+              {(!lotteryId || participants.filter(p => p.status === 'active' || p.status === 'winner').length === 0) && (
                 <div className="bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 p-10 rounded-3xl shadow-2xl mb-8">
-                  <h2 className="text-3xl font-black text-white mb-8 tracking-tighter uppercase">Create New Contest</h2>
+                  <h2 className="text-3xl font-black text-white mb-8 tracking-tighter uppercase">
+                    {lotteryId ? 'Initialize Empty Contest' : 'Create New Contest'}
+                  </h2>
                   
                   <div className="space-y-6">
                     <div>
@@ -421,7 +445,7 @@ export default function AdminLottery() {
                           : 'bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 text-white border border-white/10 hover:scale-[1.02] hover:shadow-slate-500/25 active:scale-95'
                       }`}
                     >
-                      {loading ? 'Initializing contest...' : 'Create Contest'}
+                      {loading ? (lotteryId ? 'Initializing contestant pool...' : 'Initializing contest...') : (lotteryId ? 'Seed Participants' : 'Create Contest')}
                     </button>
                   </div>
                 </div>
@@ -543,6 +567,21 @@ export default function AdminLottery() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Reset/New Contest Button - Show when finished OR when stuck with 0 participants */}
+                  {(winnerName || (lotteryId && participants.filter(p => p.status === 'active' || p.status === 'winner').length === 0)) && (
+                    <div className="mt-10 pt-10 border-t border-white/5 flex justify-center">
+                      <button
+                        onClick={handleReset}
+                        className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 border border-white/10"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        {winnerName ? 'Start Next Contest' : 'Reset Empty Contest'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
