@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+
 import './index.css';
 import RegistrationForm from './RegistrationForm';
 import LotteryDashboard from './pages/LotteryDashboard';
@@ -10,6 +12,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+
         <Route path="/" element={<RegistrationForm />} />
         <Route path="/lottery" element={<LotteryDashboard />} />
         <Route path="/admin/login" element={<AdminLogin />} />

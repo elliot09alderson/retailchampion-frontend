@@ -1,5 +1,6 @@
 // API Configuration
-export const API_BASE_URL = 'https://retailchampions.com';
+// export const API_BASE_URL = 'https://retailchampions.com';
+export const API_BASE_URL = 'http://localhost:5007';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -22,5 +23,7 @@ export const API_ENDPOINTS = {
     REGISTER: `${API_BASE_URL}/api/users/register`,
     GET_BY_ID: (id: string) => `${API_BASE_URL}/api/users/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/users/${id}`,
+    DELETE_ALL: `${API_BASE_URL}/api/users`,
+
   },
 };

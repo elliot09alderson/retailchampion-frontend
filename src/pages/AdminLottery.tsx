@@ -3,8 +3,9 @@ import { API_ENDPOINTS } from '../config/api';
 import SpinnerDisplay from '../components/SpinnerDisplay';
 import UsersManagement from '../components/UsersManagement';
 import Confetti from '../components/Confetti';
+import OperationalGuidelines from '../components/OperationalGuidelines';
 
-type ViewType = 'spinner' | 'users';
+type ViewType = 'spinner' | 'users' | 'info';
 
 export default function AdminLottery() {
   const [activeView, setActiveView] = useState<ViewType>('spinner');
@@ -260,9 +261,14 @@ export default function AdminLottery() {
             }`}
             title="Spinner"
           >
-            <span className="text-xl">🎯</span>
-            {!isSidebarCollapsed && <span className="tracking-wide">SPINNER CONTROL</span>}
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">SPINNER CONTROL</span>}
           </button>
+
           <button
             onClick={() => setActiveView('users')}
             className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
@@ -274,9 +280,35 @@ export default function AdminLottery() {
             }`}
             title="Users"
           >
-            <span className="text-xl">👥</span>
-            {!isSidebarCollapsed && <span className="tracking-wide">USER MANAGEMENT</span>}
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">USER MANAGEMENT</span>}
           </button>
+
+          <button
+            onClick={() => setActiveView('info')}
+            className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
+              isSidebarCollapsed ? 'justify-center' : 'gap-4'
+            } ${
+              activeView === 'info'
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.1)]'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+            title="Info"
+          >
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">INFO</span>}
+          </button>
+
+
+
         </nav>
 
         {/* Logout Button */}
@@ -308,13 +340,18 @@ export default function AdminLottery() {
             <div className="p-8 relative">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] -mr-32 -mt-32" />
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase relative z-10">
-                {activeView === 'spinner' ? (eventName || 'Contest Control') : 'User Management'}
+                {activeView === 'spinner' ? (eventName || 'Contest Control') : 
+                 activeView === 'users' ? 'User Management' : 'Information Center'}
               </h1>
               <p className="text-slate-400 mt-2 font-bold tracking-widest uppercase text-[10px] relative z-10">
                 {activeView === 'spinner' 
                   ? 'Manage contest spins and view participants' 
-                  : 'View and manage registered users'}
+                  : activeView === 'users'
+                  ? 'View and manage registered users'
+                  : 'System configuration and operational guidelines'}
               </p>
+
+
             </div>
           </div>
 
@@ -509,37 +546,38 @@ export default function AdminLottery() {
                 </div>
               )}
 
-              {/* Instructions */}
-              <div className="mt-8 bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 rounded-3xl p-10 shadow-2xl">
-                <h3 className="text-xl font-black text-white mb-8 uppercase tracking-[0.2em] flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  Operational Guidelines
-                </h3>
-                <ul className="space-y-5">
-                  {[
-                    "Create a new contest event to begin the engagement",
-                    "Users can register through the designated registration form",
-                    "Click 'Execute Spin' to run consecutive rounds (1-4)",
-                    "Intelligent Elimination: R1-R3 filters pool, R4 selects the Grand Winner",
-                    "Participants view real-time result updates on their dashboard",
-                    "Access restricted to authorized Administrative Personnel"
-                  ].map((text, i) => (
-                    <li key={i} className="flex items-start gap-4 text-slate-400 font-bold text-[11px] uppercase tracking-wider group">
-                      <span className="w-2 h-2 rounded-full bg-blue-500/40 mt-1 transition-all group-hover:bg-blue-400 group-hover:scale-125 group-hover:shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                      {text}
-                    </li>
-                  ))}
-                </ul>
-              </div>
             </>
-          ) : (
+          ) : activeView === 'users' ? (
             /* Users Management View */
             <UsersManagement />
+          ) : (
+            /* Info View */
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] -mr-16 -mt-16" />
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-2 relative z-10">System Status</p>
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                    <p className="text-2xl font-black text-white tracking-tight">OPERATIONAL</p>
+                  </div>
+                </div>
+                <div className="bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] -mr-16 -mt-16" />
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-2 relative z-10">API Latency</p>
+                  <p className="text-2xl font-black text-white tracking-tight relative z-10">14ms <span className="text-blue-400 text-xs ml-1">AVG</span></p>
+                </div>
+                <div className="bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[50px] -mr-16 -mt-16" />
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-2 relative z-10">Security Tier</p>
+                  <p className="text-2xl font-black text-white tracking-tight relative z-10">ENCRYPTED</p>
+                </div>
+              </div>
+              <OperationalGuidelines />
+            </div>
           )}
+
+
         </div>
       </div>
     </div>

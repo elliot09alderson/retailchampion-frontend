@@ -1,4 +1,7 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { toast, Toaster } from 'react-hot-toast';
+
+
 import * as Yup from 'yup';
 import { useState } from 'react';
 import { API_ENDPOINTS } from './config/api';
@@ -40,6 +43,11 @@ interface FormValues {
 
 export default function RegistrationForm() {
   const [userImagePreview, setUserImagePreview] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [registrationData, setRegistrationData] = useState<any>(null);
+
+  const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/IjyBuEn6mJh3PFx9yEgpWX";
+
 
   const initialValues: FormValues = {
     name: '',
@@ -90,32 +98,39 @@ export default function RegistrationForm() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Registration successful!\n\nWelcome ${data.data.name}!\nYour account has been created.`);
-        // Reset form or redirect to login
-        window.location.href = '/'; // Redirect to home/login
+        toast.success('Registration successful!');
+        setRegistrationData(data.data);
+        setShowSuccessModal(true);
       } else {
-        // Show validation errors
+        // Handle specific duplicate error or validation errors
         if (data.errors && Array.isArray(data.errors)) {
           const errorObj: any = {};
           data.errors.forEach((err: any) => {
             errorObj[err.field] = err.message;
           });
           setErrors(errorObj);
+          toast.error('Please check the form for errors');
+        } else if (response.status === 409) {
+          // Duplicate key error from backend
+          toast.error(data.message || 'Phone number or document already registered');
         } else {
-          alert(`❌ Registration failed:\n${data.message}`);
+          toast.error(data.message || 'Registration failed');
         }
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      alert('❌ Failed to register. Please check your connection and try again.');
+    } catch (err: any) {
+      console.error('Submission error:', err);
+      toast.error('Network error. Please check your connection.');
     } finally {
       setSubmitting(false);
     }
   };
 
+
   return (
     <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-2xl fade-in">
+
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl md:text-5xl font-semibold text-[#0f172a] mb-2 tracking-tight">
@@ -309,7 +324,6 @@ export default function RegistrationForm() {
             )}
           </Formik>
         </div>
-
         {/* Footer */}
         <p className="text-center text-sm text-[#64748b] mt-8">
           Already registered?{' '}
@@ -318,6 +332,54 @@ export default function RegistrationForm() {
           </a>
         </p>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && registrationData && (
+        <div className="fixed inset-0 bg-[#0f172a]/90 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl p-10 max-w-lg w-full shadow-[0_0_50px_rgba(0,0,0,0.3)] text-center animate-in zoom-in-95 duration-500 relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[40px] -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/5 blur-[40px] -ml-16 -mb-16" />
+
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h2 className="text-3xl font-black text-[#0f172a] mb-2 tracking-tight uppercase">Registration Successful!</h2>
+            <p className="text-[#64748b] font-medium mb-8">Welcome to Retail Champions, {registrationData.name}!</p>
+
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 mb-8 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 py-1 border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Your Coupon Code</span>
+              <p className="text-4xl font-black text-blue-600 tracking-[0.1em] font-mono">{registrationData.couponCode}</p>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-[#334155] uppercase tracking-wider mb-2">Join our community</p>
+              <a 
+                href={WHATSAPP_GROUP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 w-full py-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95 group"
+              >
+                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.474.875 3.183 1.357 4.935 1.358 4.833.002 8.767-3.931 8.77-8.766 0-2.343-.911-4.544-2.566-6.199s-3.855-2.566-6.198-2.567c-4.835 0-8.771 3.935-8.774 8.77-.001 1.573.411 3.103 1.196 4.453l1.01 1.742-1.071 3.91 4.008-1.051zm10.946-6.166c-.103-.173-.38-.277-.796-.485s-2.459-1.213-2.839-1.353-.657-.208-.933.208-.103.208-.069.277.103.173.208.277c.103.104.208.242.311.346.103.104.242.242.103.485s-.208.242-.484.242-.276.104-1.972-.519c-1.319-1.177-2.208-2.632-2.467-3.048s-.027-.64.18-.847c.187-.186.415-.484.622-.726.208-.242.276-.415.415-.691s.069-.519-.034-.726-.933-2.248-1.279-3.078c-.337-.813-.68-.703-.933-.716s-.519-.013-.795-.013-.726.104-1.107.519-1.453 1.419-1.453 3.46 1.487 4.012 1.694 4.288c.208.277 2.925 4.46 7.087 6.256 1.13.487 1.83.649 2.505.862.991.315 1.898.27 2.613.163.796-.118 2.316-1.141 2.645-2.248s.329-2.041.208-2.248z" />
+                </svg>
+                Join WhatsApp Group
+              </a>
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-[#334155] font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
