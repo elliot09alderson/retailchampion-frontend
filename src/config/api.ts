@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
     SEED_PARTICIPANTS: `${API_BASE_URL}/api/lottery/seed/participants`,
     HISTORY: `${API_BASE_URL}/api/lottery/history`,
     DELETE: (id: string) => `${API_BASE_URL}/api/lottery/${id}`,
+    DELETE_ALL: `${API_BASE_URL}/api/lottery/history/all`,
   },
   USERS: {
     GET_ALL: `${API_BASE_URL}/api/users`,
