@@ -432,38 +432,38 @@ export default function UsersManagement() {
                     <tr key={user._id} className="hover:bg-white/5 transition-all duration-300">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="flex -space-x-3">
+                          <div className="relative flex -space-x-3 group">
                             <img
-                              src={user.selfieUrl}
+                              src={user.selfieUrl || 'https://via.placeholder.com/150?text=No+Photo'}
                               alt={user.name}
                               onClick={() => setPreviewImage(user.selfieUrl)}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-10 hover:border-blue-500/50 transition-all duration-300"
+                              className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-20 hover:border-blue-500 transition-all duration-300 relative z-10 bg-slate-800"
                             />
                             {user.imageUrl && (
                               <img
                                 src={user.imageUrl}
                                 alt="Bill"
                                 onClick={() => setPreviewImage(user.imageUrl)}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-10 hover:border-blue-500/50 transition-all duration-300"
+                                className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-20 hover:border-blue-500 transition-all duration-300 bg-slate-800"
                               />
                             )}
                           </div>
-                          <div className="flex flex-col ml-2">
-                            <p className="text-white font-bold text-lg">{user.name}</p>
-                            <p className="text-blue-400 text-sm font-medium">{user.phoneNumber}</p>
+                          <div className="flex flex-col ml-4">
+                            <p className="text-white font-bold text-lg leading-tight">{user.name}</p>
+                            <p className="text-blue-400 font-mono text-sm mt-0.5">{user.phoneNumber}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <div className="space-y-1">
-                          <div>
-                            <span className="text-xs text-[#64748b] uppercase tracking-wide">Aadhaar</span>
-                            <p className="text-[#334155] text-sm font-mono">{user.aadhaarNumber}</p>
+                        <div className="space-y-3">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Aadhaar Document</span>
+                            <p className="text-slate-200 text-sm font-mono tracking-wider">{user.aadhaarNumber}</p>
                           </div>
                           {user.panNumber && (
-                            <div className="mt-2">
-                              <span className="text-xs text-[#64748b] uppercase tracking-wide">PAN</span>
-                              <p className="text-[#334155] text-sm font-mono">{user.panNumber}</p>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">PAN Document</span>
+                              <p className="text-slate-200 text-sm font-mono tracking-wider">{user.panNumber}</p>
                             </div>
                           )}
                         </div>
@@ -504,10 +504,10 @@ export default function UsersManagement() {
                   <div className="flex items-start gap-4 mb-4">
                     <div className="flex gap-2">
                       <img
-                        src={user.selfieUrl}
+                        src={user.selfieUrl || 'https://via.placeholder.com/150?text=HP'}
                         alt={user.name}
                         onClick={() => setPreviewImage(user.selfieUrl)}
-                        className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300"
+                        className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300 bg-slate-800"
                       />
                       {user.imageUrl && (
                         <img

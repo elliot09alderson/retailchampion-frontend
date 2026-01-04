@@ -116,7 +116,7 @@ export default function LotteryDashboard() {
       return (
         <WinnerAnnouncement 
           winnerName={winnerData.userId.name}
-          winnerImage={winnerData.userId.imageUrl}
+          winnerImage={winnerData.userId.selfieUrl}
         />
       );
     }

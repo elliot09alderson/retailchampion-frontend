@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
     WINNER: (id: string) => `${API_BASE_URL}/api/lottery/${id}/winner`,
     REGISTER: (id: string) => `${API_BASE_URL}/api/lottery/${id}/register`,
     SEED_PARTICIPANTS: `${API_BASE_URL}/api/lottery/seed/participants`,
+    HISTORY: `${API_BASE_URL}/api/lottery/history`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/lottery/${id}`,
   },
   USERS: {
     GET_ALL: `${API_BASE_URL}/api/users`,

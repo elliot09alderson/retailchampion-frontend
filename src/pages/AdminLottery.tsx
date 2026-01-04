@@ -4,8 +4,9 @@ import SpinnerDisplay from '../components/SpinnerDisplay';
 import UsersManagement from '../components/UsersManagement';
 import Confetti from '../components/Confetti';
 import OperationalGuidelines from '../components/OperationalGuidelines';
+import WinnersHistory from '../components/WinnersHistory.tsx';
 
-type ViewType = 'spinner' | 'users' | 'info';
+type ViewType = 'spinner' | 'users' | 'winners' | 'info';
 
 export default function AdminLottery() {
   const [activeView, setActiveView] = useState<ViewType>('spinner');
@@ -18,8 +19,10 @@ export default function AdminLottery() {
   const [message, setMessage] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [winnerName, setWinnerName] = useState<string | null>(null);
+  const [winnerImage, setWinnerImage] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [requestedParticipantCount, setRequestedParticipantCount] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Fetch active lottery on mount
   useEffect(() => {
@@ -58,8 +61,10 @@ export default function AdminLottery() {
         const winner = data.data.find((p: any) => p.status === 'winner');
         if (winner && winner.userId) {
           setWinnerName(winner.userId.name);
+          setWinnerImage(winner.userId.selfieUrl);
         } else {
           setWinnerName(null);
+          setWinnerImage(null);
         }
 
         // Set total participants on first load (when it hasn't been set yet)
@@ -153,6 +158,7 @@ export default function AdminLottery() {
     setParticipants([]);
     setTotalParticipants(0);
     setWinnerName(null);
+    setWinnerImage(null);
     setShowConfetti(false);
     setMessage('Prepare for the next champion cycle.');
   };
@@ -167,6 +173,7 @@ export default function AdminLottery() {
     setIsSpinning(true);
     setLoading(true);
     setWinnerName(null); // Reset winner
+    setWinnerImage(null);
     setShowConfetti(false); // Reset confetti before spin
     
     // Make the API call in the background
@@ -187,6 +194,7 @@ export default function AdminLottery() {
         // If lottery is complete, get the winner
         if (data.data.isComplete && data.data.winner) {
           setWinnerName(data.data.winner.name);
+          setWinnerImage(data.data.winner.selfieUrl || (data.data.winner.userId ? data.data.winner.userId.selfieUrl : null));
         }
       } else {
         setMessage(data.message);
@@ -311,6 +319,25 @@ export default function AdminLottery() {
           </button>
 
           <button
+            onClick={() => setActiveView('winners')}
+            className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
+              isSidebarCollapsed ? 'justify-center' : 'gap-4'
+            } ${
+              activeView === 'winners'
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.1)]'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+            title="Winners"
+          >
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">WINNERS CIRCLE</span>}
+          </button>
+
+          <button
             onClick={() => setActiveView('info')}
             className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
               isSidebarCollapsed ? 'justify-center' : 'gap-4'
@@ -363,13 +390,16 @@ export default function AdminLottery() {
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] -mr-32 -mt-32" />
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase relative z-10">
                 {activeView === 'spinner' ? (eventName || 'Contest Control') : 
-                 activeView === 'users' ? 'User Management' : 'Information Center'}
+                 activeView === 'users' ? 'User Management' : 
+                 activeView === 'winners' ? 'Winners Circle' : 'Information Center'}
               </h1>
               <p className="text-slate-400 mt-2 font-bold tracking-widest uppercase text-[10px] relative z-10">
                 {activeView === 'spinner' 
                   ? 'Manage contest spins and view participants' 
                   : activeView === 'users'
                   ? 'View and manage registered users'
+                  : activeView === 'winners'
+                  ? 'The Hall of Fame for Retail Champions'
                   : 'System configuration and operational guidelines'}
               </p>
 
@@ -403,6 +433,7 @@ export default function AdminLottery() {
                   onExecuteSpin={handleExecuteSpin}
                   onSpinComplete={handleSpinComplete}
                   winnerName={winnerName}
+                  winnerImage={winnerImage}
                 />
               </div>
 
@@ -479,24 +510,37 @@ export default function AdminLottery() {
                             <p className="text-slate-500 text-sm font-bold uppercase tracking-widest italic">Waiting for entrants...</p>
                           </div>
                         ) : (
-                          participants
+                            participants
                             .filter(p => p.status === 'active' || p.status === 'winner')
                             .map((participant, index) => (
                               <div
                                 key={participant._id}
                                 className={`p-4 rounded-xl border transition-all duration-300 backdrop-blur-sm ${
                                   participant.status === 'winner'
-                                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                                    ? 'bg-yellow-500/10 border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]'
                                     : 'bg-white/5 border-white/10 hover:bg-white/10'
                                 }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-black border border-emerald-500/30">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-[10px] font-black border border-emerald-500/30 shrink-0">
                                       {index + 1}
                                     </div>
+                                    <div className="relative group cursor-pointer" onClick={() => setPreviewImage(participant.userId?.selfieUrl)}>
+                                      <img 
+                                        src={participant.userId?.selfieUrl || 'https://via.placeholder.com/150?text=HP'} 
+                                        className="w-10 h-10 rounded-full object-cover border-2 border-white/20 group-hover:border-blue-400 transition-all"
+                                        alt=""
+                                      />
+                                      <div className="absolute inset-0 bg-blue-600/20 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                      </div>
+                                    </div>
                                     <div>
-                                      <p className="text-white font-bold text-sm">
+                                      <p className="text-white font-bold text-sm leading-tight">
                                         {participant.userId?.name || 'Unknown User'}
                                       </p>
                                       <p className="text-slate-400 text-[10px] font-bold tracking-tight uppercase">
@@ -504,7 +548,7 @@ export default function AdminLottery() {
                                       </p>
                                     </div>
                                   </div>
-                                  <div className={`px-3 py-1.5 rounded-lg border font-black uppercase text-[10px] tracking-widest shadow-lg ${
+                                  <div className={`px-2 py-1 rounded-md border font-black uppercase text-[8px] tracking-widest ${
                                     participant.status === 'winner' 
                                       ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' 
                                       : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
@@ -543,11 +587,18 @@ export default function AdminLottery() {
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 text-xs font-bold border border-white/10">
+                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 text-[10px] font-bold border border-white/10 shrink-0">
                                       {index + 1}
                                     </div>
+                                    <div className="relative group cursor-pointer" onClick={() => setPreviewImage(participant.userId?.selfieUrl)}>
+                                      <img 
+                                        src={participant.userId?.selfieUrl || 'https://via.placeholder.com/150?text=HP'} 
+                                        className="w-10 h-10 rounded-full object-cover border-2 border-white/10 grayscale group-hover:grayscale-0 transition-all opacity-60 group-hover:opacity-100"
+                                        alt=""
+                                      />
+                                    </div>
                                     <div>
-                                      <p className="text-slate-200 font-bold text-sm">
+                                      <p className="text-slate-200 font-bold text-sm leading-tight">
                                         {participant.userId?.name || 'Unknown User'}
                                       </p>
                                       <p className="text-rose-500/80 text-[10px] font-black uppercase tracking-tighter">
@@ -589,6 +640,9 @@ export default function AdminLottery() {
           ) : activeView === 'users' ? (
             /* Users Management View */
             <UsersManagement />
+          ) : activeView === 'winners' ? (
+            /* Winners Circle View */
+            <WinnersHistory />
           ) : (
             /* Info View */
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -614,11 +668,36 @@ export default function AdminLottery() {
               </div>
               <OperationalGuidelines />
             </div>
-          )}
-
-
-        </div>
+          )}        </div>
       </div>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4 cursor-zoom-out"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-2xl w-full max-h-[80vh] flex items-center justify-center animate-in zoom-in-95 duration-300">
+            <button 
+              className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(null);
+              }}
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="max-w-full max-h-full object-contain rounded-2xl border-4 border-white/10 shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
