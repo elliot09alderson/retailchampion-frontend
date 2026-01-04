@@ -24,12 +24,23 @@ const registrationSchema = Yup.object().shape({
     .nullable()
     .transform((value) => value === '' ? null : value),
   userImage: Yup.mixed()
-    .required('Bill is required')
+    .optional()
+    .nullable()
+    .test('fileSize', 'File size must be less than 5MB', (value: any) => {
+      if (!value) return true;
+      return value.size <= 5242880;
+    })
+    .test('fileType', 'Only JPG, JPEG, PNG, PDF files are allowed', (value: any) => {
+      if (!value) return true;
+      return ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'].includes(value.type);
+    }),
+  selfie: Yup.mixed()
+    .required('Selfie is required')
     .test('fileSize', 'File size must be less than 5MB', (value: any) => {
       return value && value.size <= 5242880;
     })
-    .test('fileType', 'Only JPG, JPEG, PNG, PDF files are allowed', (value: any) => {
-      return value && ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'].includes(value.type);
+    .test('fileType', 'Only JPG, JPEG, PNG are allowed', (value: any) => {
+      return value && ['image/jpeg', 'image/jpg', 'image/png'].includes(value.type);
     }),
 });
 
@@ -39,10 +50,12 @@ interface FormValues {
   aadhaarNumber: string;
   panNumber: string;
   userImage: File | null;
+  selfie: File | null;
 }
 
 export default function RegistrationForm() {
   const [userImagePreview, setUserImagePreview] = useState<string | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
 
@@ -55,6 +68,7 @@ export default function RegistrationForm() {
     aadhaarNumber: '',
     panNumber: '',
     userImage: null,
+    selfie: null,
   };
 
   const handleFileChange = (
@@ -88,6 +102,9 @@ export default function RegistrationForm() {
       }
       if (values.userImage) {
         formData.append('image', values.userImage);
+      }
+      if (values.selfie) {
+        formData.append('selfie', values.selfie);
       }
 
       const response = await fetch(API_ENDPOINTS.USERS.REGISTER, {
@@ -157,6 +174,62 @@ export default function RegistrationForm() {
           >
             {({ setFieldValue, isSubmitting, errors, touched }) => (
               <Form className="space-y-7">
+                {/* Selfie Upload */}
+                <div className="flex flex-col items-center justify-center space-y-4 mb-8">
+                  <div className="relative group">
+                    <input
+                      type="file"
+                      id="selfie"
+                      name="selfie"
+                      accept=".jpg,.jpeg,.png"
+                      capture="user"
+                      onChange={(event) =>
+                        handleFileChange(event, setFieldValue, 'selfie', setSelfiePreview)
+                      }
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="selfie"
+                      className={`relative flex flex-col items-center justify-center w-36 h-36 rounded-full border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
+                        errors.selfie && touched.selfie
+                          ? 'border-[#ef4444] bg-red-50/30'
+                          : 'border-[#cbd5e1] bg-[#f8fafc] hover:bg-[#f1f5f9] hover:border-[#334155]'
+                      }`}
+                    >
+                      {selfiePreview ? (
+                        <div className="w-full h-full">
+                          <img src={selfiePreview} alt="Selfie Preview" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-center p-4">
+                          <svg className="w-8 h-8 mx-auto text-[#94a3b8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <div className="text-[10px] text-[#64748b] font-bold uppercase tracking-wider">
+                            Take Selfie
+                          </div>
+                        </div>
+                      )}
+                    </label>
+                    <div className="absolute bottom-1 right-1 bg-[#334155] text-white p-2 rounded-full shadow-lg border-2 border-white transition-transform group-hover:scale-110">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <label className="block text-xs font-black text-[#334155] uppercase tracking-[0.2em]">
+                      Step 1: Participant Photo <span className="text-[#ef4444]">*</span>
+                    </label>
+                    <ErrorMessage
+                      name="selfie"
+                      component="div"
+                      className="text-[#ef4444] text-[10px] font-medium mt-1 uppercase"
+                    />
+                  </div>
+                </div>
+
                 {/* Name Field */}
                 <div className="space-y-2">
                   <label htmlFor="name" className="block text-sm font-medium text-[#334155]">
@@ -250,10 +323,12 @@ export default function RegistrationForm() {
                   />
                 </div>
 
+
+
                 {/* Bill Upload */}
                 <div className="space-y-2">
                   <label htmlFor="userImage" className="block text-sm font-medium text-[#334155]">
-                    Bill <span className="text-[#ef4444]">*</span>
+                    Bill <span className="text-[#64748b] text-xs font-normal">(Optional)</span>
                   </label>
                   
                   <div className="relative">
@@ -295,7 +370,7 @@ export default function RegistrationForm() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           <div className="text-sm text-[#64748b]">
-                            <span className="font-medium text-[#334155]">Click to upload</span> or drag and drop
+                            <span className="font-medium text-[#334155]">Click to upload bill</span> or drag and drop
                           </div>
                           <p className="text-xs text-[#94a3b8]">JPG, PNG, PDF (max 5MB)</p>
                         </div>

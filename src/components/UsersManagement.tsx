@@ -11,6 +11,7 @@ interface User {
   aadhaarNumber: string;
   panNumber?: string;
   imageUrl: string;
+  selfieUrl: string;
   couponCode?: string;
   createdAt: string;
 
@@ -431,13 +432,23 @@ export default function UsersManagement() {
                     <tr key={user._id} className="hover:bg-white/5 transition-all duration-300">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <img
-                            src={user.imageUrl}
-                            alt={user.name}
-                            onClick={() => setPreviewImage(user.imageUrl)}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:border-blue-500/50 transition-all duration-300"
-                          />
-                          <div className="flex flex-col">
+                          <div className="flex -space-x-3">
+                            <img
+                              src={user.selfieUrl}
+                              alt={user.name}
+                              onClick={() => setPreviewImage(user.selfieUrl)}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-10 hover:border-blue-500/50 transition-all duration-300"
+                            />
+                            {user.imageUrl && (
+                              <img
+                                src={user.imageUrl}
+                                alt="Bill"
+                                onClick={() => setPreviewImage(user.imageUrl)}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg cursor-pointer hover:scale-110 hover:z-10 hover:border-blue-500/50 transition-all duration-300"
+                              />
+                            )}
+                          </div>
+                          <div className="flex flex-col ml-2">
                             <p className="text-white font-bold text-lg">{user.name}</p>
                             <p className="text-blue-400 text-sm font-medium">{user.phoneNumber}</p>
                           </div>
@@ -491,12 +502,22 @@ export default function UsersManagement() {
               {users.map((user) => (
                 <div key={user._id} className="p-6 hover:bg-white/5 transition-colors">
                   <div className="flex items-start gap-4 mb-4">
-                    <img
-                      src={user.imageUrl}
-                      alt={user.name}
-                      onClick={() => setPreviewImage(user.imageUrl)}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300"
-                    />
+                    <div className="flex gap-2">
+                      <img
+                        src={user.selfieUrl}
+                        alt={user.name}
+                        onClick={() => setPreviewImage(user.selfieUrl)}
+                        className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300"
+                      />
+                      {user.imageUrl && (
+                        <img
+                          src={user.imageUrl}
+                          alt="Bill"
+                          onClick={() => setPreviewImage(user.imageUrl)}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300"
+                        />
+                      )}
+                    </div>
 
                     <div className="flex-1">
                       <p className="text-white font-black text-xl tracking-tight">{user.name}</p>
