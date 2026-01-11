@@ -5,8 +5,10 @@ import UsersManagement from '../components/UsersManagement';
 import Confetti from '../components/Confetti';
 import OperationalGuidelines from '../components/OperationalGuidelines';
 import WinnersHistory from '../components/WinnersHistory.tsx';
+import PackagesManagement from '../components/PackagesManagement';
+import ContestHistory from '../components/ContestHistory';
 
-type ViewType = 'spinner' | 'users' | 'winners' | 'info';
+type ViewType = 'spinner' | 'users' | 'winners' | 'history' | 'packages' | 'info';
 
 export default function AdminLottery() {
   const [activeView, setActiveView] = useState<ViewType>('spinner');
@@ -23,11 +25,32 @@ export default function AdminLottery() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [requestedParticipantCount, setRequestedParticipantCount] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<number>(0);
+  const [availablePackages, setAvailablePackages] = useState<any[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
 
-  // Fetch active lottery on mount
+  // Fetch active lottery and packages on mount
   useEffect(() => {
     fetchActiveLottery();
+    fetchPackages();
   }, []);
+
+  const fetchPackages = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+      const data = await response.json();
+      if (data.success) {
+        setAvailablePackages(data.data);
+        if (data.data.length > 0) {
+          setSelectedPackage(data.data[0].amount);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch packages:', err);
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
 
   const fetchActiveLottery = async () => {
     try {
@@ -40,7 +63,7 @@ export default function AdminLottery() {
         fetchParticipants(data.data._id);
       }
     } catch (err) {
-      console.error('Failed to fetch active lottery:', err);
+      // Silence expected 404 when no active lottery exists
     }
   };
 
@@ -128,7 +151,7 @@ export default function AdminLottery() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ eventName }),
+        body: JSON.stringify({ eventName, package: selectedPackage }),
       });
 
       const data = await response.json();
@@ -338,6 +361,44 @@ export default function AdminLottery() {
           </button>
 
           <button
+            onClick={() => setActiveView('history')}
+            className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
+              isSidebarCollapsed ? 'justify-center' : 'gap-4'
+            } ${
+              activeView === 'history'
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.1)]'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+            title="Contest History"
+          >
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">CONTEST HISTORY</span>}
+          </button>
+
+          <button
+            onClick={() => setActiveView('packages')}
+            className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
+              isSidebarCollapsed ? 'justify-center' : 'gap-4'
+            } ${
+              activeView === 'packages'
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.1)]'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+            title="Registration Packs"
+          >
+            <span className="text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </span>
+            {!isSidebarCollapsed && <span className="tracking-wide uppercase">REGISTRATION PACKS</span>}
+          </button>
+
+          <button
             onClick={() => setActiveView('info')}
             className={`w-full px-4 py-3.5 rounded-xl text-left font-bold transition-all flex items-center ${
               isSidebarCollapsed ? 'justify-center' : 'gap-4'
@@ -391,7 +452,9 @@ export default function AdminLottery() {
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase relative z-10">
                 {activeView === 'spinner' ? (eventName || 'Contest Control') : 
                  activeView === 'users' ? 'User Management' : 
-                 activeView === 'winners' ? 'Winners Circle' : 'Information Center'}
+                 activeView === 'winners' ? 'Winners Circle' : 
+                 activeView === 'history' ? 'Contest History' :
+                 activeView === 'packages' ? 'Registration Packs' : 'Information Center'}
               </h1>
               <p className="text-slate-400 mt-2 font-bold tracking-widest uppercase text-[10px] relative z-10">
                 {activeView === 'spinner' 
@@ -400,6 +463,10 @@ export default function AdminLottery() {
                   ? 'View and manage registered users'
                   : activeView === 'winners'
                   ? 'The Hall of Fame for Retail Champions'
+                  : activeView === 'history'
+                  ? 'Complete Battle Log and Historical Data'
+                  : activeView === 'packages'
+                  ? 'Create and manage contest registration tiers'
                   : 'System configuration and operational guidelines'}
               </p>
 
@@ -454,6 +521,36 @@ export default function AdminLottery() {
                         placeholder="E.G. Annual Gala 2024"
                         className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all font-bold tracking-wide"
                       />
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-slate-400 font-black mb-3 text-[10px] uppercase tracking-[0.2em]">Select Package</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        {loadingPackages ? (
+                          <div className="col-span-2 text-center py-4 text-slate-500 font-medium">Loading packages...</div>
+                        ) : availablePackages.length === 0 ? (
+                          <div className="col-span-2 text-center py-4 text-rose-500 font-bold uppercase tracking-widest text-[10px]">No active packages available</div>
+                        ) : (
+                          availablePackages.map((pkg) => (
+                            <button
+                              key={pkg._id}
+                              onClick={() => setSelectedPackage(pkg.amount)}
+                              className={`p-4 rounded-2xl border-2 transition-all font-black text-lg relative group ${
+                                selectedPackage === pkg.amount
+                                  ? 'border-blue-500 bg-blue-500/10 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                                  : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20'
+                              }`}
+                            >
+                              <div className="flex flex-col items-center">
+                                <span>₹{pkg.amount.toLocaleString()}</span>
+                                <span className={`text-[10px] uppercase tracking-tighter mt-1 font-bold ${selectedPackage === pkg.amount ? 'text-blue-400' : 'text-slate-500'}`}>
+                                  {pkg.userCount || 0} Registered Users
+                                </span>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -643,6 +740,10 @@ export default function AdminLottery() {
           ) : activeView === 'winners' ? (
             /* Winners Circle View */
             <WinnersHistory />
+          ) : activeView === 'history' ? (
+            <ContestHistory />
+          ) : activeView === 'packages' ? (
+            <PackagesManagement />
           ) : (
             /* Info View */
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

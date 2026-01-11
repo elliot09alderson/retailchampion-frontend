@@ -3,7 +3,7 @@ import { toast, Toaster } from 'react-hot-toast';
 
 
 import * as Yup from 'yup';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from './config/api';
 
 // Validation schema
@@ -23,6 +23,13 @@ const registrationSchema = Yup.object().shape({
     .optional()
     .nullable()
     .transform((value) => value === '' ? null : value),
+  registrationId: Yup.string()
+    .matches(/^\d{10}$/, 'ID must be exactly 10 digits')
+    .optional()
+    .nullable()
+    .transform((value) => value === '' ? null : value),
+  package: Yup.number()
+    .required('Package selection is required'),
   userImage: Yup.mixed()
     .optional()
     .nullable()
@@ -49,6 +56,8 @@ interface FormValues {
   phoneNumber: string;
   aadhaarNumber: string;
   panNumber: string;
+  registrationId: string;
+  package: number;
   userImage: File | null;
   selfie: File | null;
 }
@@ -58,6 +67,26 @@ export default function RegistrationForm() {
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [availablePackages, setAvailablePackages] = useState<any[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // Fetch available packages
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+        const data = await response.json();
+        if (data.success) {
+          setAvailablePackages(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch packages:', err);
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+    fetchPackages();
+  }, []);
 
   const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/IjyBuEn6mJh3PFx9yEgpWX";
 
@@ -67,6 +96,8 @@ export default function RegistrationForm() {
     phoneNumber: '',
     aadhaarNumber: '',
     panNumber: '',
+    registrationId: '',
+    package: 0, // Will be set after fetching packages
     userImage: null,
     selfie: null,
   };
@@ -100,6 +131,10 @@ export default function RegistrationForm() {
       if (values.panNumber) {
         formData.append('panNumber', values.panNumber);
       }
+      if (values.registrationId) {
+        formData.append('registrationId', values.registrationId);
+      }
+      formData.append('package', values.package.toString());
       if (values.userImage) {
         formData.append('image', values.userImage);
       }
@@ -172,7 +207,7 @@ export default function RegistrationForm() {
             validationSchema={registrationSchema}
             onSubmit={handleSubmit}
           >
-            {({ setFieldValue, isSubmitting, errors, touched }) => (
+            {({ setFieldValue, isSubmitting, errors, touched, values }) => (
               <Form className="space-y-7">
                 {/* Selfie Upload */}
                 <div className="flex flex-col items-center justify-center space-y-4 mb-8">
@@ -249,6 +284,55 @@ export default function RegistrationForm() {
                   <ErrorMessage name="name" component="div" className="text-[#ef4444] text-xs font-normal" />
                 </div>
 
+                {/* Package Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[#334155]">
+                    Select Contest Package <span className="text-[#ef4444]">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {loadingPackages ? (
+                      <div className="col-span-2 text-center py-4 text-slate-400 font-medium">Loading packages...</div>
+                    ) : availablePackages.length === 0 ? (
+                      <div className="col-span-2 text-center py-4 text-rose-500 font-bold uppercase tracking-widest text-xs">No active packages available</div>
+                    ) : (
+                      availablePackages.map((pkg) => (
+                        <label
+                          key={pkg._id}
+                          className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            values.package === pkg.amount
+                              ? 'border-blue-600 bg-blue-50/50 shadow-sm'
+                              : 'border-[#e2e8f0] bg-white hover:border-[#334155]'
+                          }`}
+                        >
+                          <Field
+                            type="radio"
+                            name="package"
+                            value={pkg.amount.toString()}
+                            className="hidden"
+                            onChange={() => setFieldValue('package', pkg.amount)}
+                          />
+                          <div className="text-center">
+                            <p className={`text-xl font-black ${values.package === pkg.amount ? 'text-blue-600' : 'text-[#334155]'}`}>
+                              ₹{pkg.amount.toLocaleString()}
+                            </p>
+                            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${values.package === pkg.amount ? 'text-blue-500' : 'text-slate-400'}`}>
+                              {pkg.name || 'Package'}
+                            </p>
+                          </div>
+                          {values.package === pkg.amount && (
+                            <div className="absolute top-2 right-2">
+                              <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  <ErrorMessage name="package" component="div" className="text-[#ef4444] text-xs font-normal" />
+                </div>
+
                 {/* Phone Number Field */}
                 <div className="space-y-2">
                   <label htmlFor="phoneNumber" className="block text-sm font-medium text-[#334155]">
@@ -268,6 +352,30 @@ export default function RegistrationForm() {
                   />
                   <ErrorMessage
                     name="phoneNumber"
+                    component="div"
+                    className="text-[#ef4444] text-xs font-normal"
+                  />
+                </div>
+
+                {/* ID Field */}
+                <div className="space-y-2">
+                  <label htmlFor="registrationId" className="block text-sm font-medium text-[#334155]">
+                    ID <span className="text-[#64748b] text-xs font-normal">(Optional, 10-digit number)</span>
+                  </label>
+                  <Field
+                    type="text"
+                    id="registrationId"
+                    name="registrationId"
+                    placeholder="Enter 10-digit ID"
+                    maxLength={10}
+                    className={`w-full px-4 py-3 rounded-md border ${
+                      errors.registrationId && touched.registrationId
+                        ? 'border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] focus:border-[#ef4444]'
+                        : 'border-[#e2e8f0] focus:ring-1 focus:ring-[#334155] focus:border-[#334155]'
+                    } focus:outline-none transition-all bg-white text-[#1f2937] placeholder-[#94a3b8]`}
+                  />
+                  <ErrorMessage
+                    name="registrationId"
                     component="div"
                     className="text-[#ef4444] text-xs font-normal"
                   />

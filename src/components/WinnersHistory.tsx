@@ -13,6 +13,7 @@ interface Contest {
   eventName: string;
   completedAt: string;
   winnerId: Winner;
+  package?: number;
   totalParticipants?: number;
 }
 
@@ -41,6 +42,7 @@ export default function WinnersHistory() {
   const [sortField, setSortField] = useState<SortField>('completedAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [filterContest, setFilterContest] = useState('');
+  const [filterPackage, setFilterPackage] = useState<string>('');
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -130,10 +132,15 @@ export default function WinnersHistory() {
     fetchHistory();
   }, []);
 
-  // Get unique contest names for filter dropdown
   const uniqueContests = useMemo(() => {
     const names = [...new Set(contests.map(c => c.eventName))];
     return names.sort();
+  }, [contests]);
+
+  // Get unique packages for filter dropdown
+  const uniquePackages = useMemo(() => {
+    const packages = [...new Set(contests.map(c => c.package).filter(Boolean))];
+    return (packages as number[]).sort((a, b) => a - b);
   }, [contests]);
 
   // Filter, search, and sort contests
@@ -154,6 +161,11 @@ export default function WinnersHistory() {
     // Apply filter
     if (filterContest) {
       result = result.filter((c) => c.eventName === filterContest);
+    }
+
+    // Apply package filter
+    if (filterPackage) {
+      result = result.filter((c) => c.package?.toString() === filterPackage);
     }
 
     // Apply sorting
@@ -194,7 +206,7 @@ export default function WinnersHistory() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterContest, sortField, sortOrder, limit]);
+  }, [searchQuery, filterContest, filterPackage, sortField, sortOrder, limit]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -228,13 +240,14 @@ export default function WinnersHistory() {
   const exportToCSV = () => {
     const dataToExport = filteredContests;
     if (dataToExport.length === 0) return;
-
-    const headers = ['S.No', 'Winner Name', 'Phone Number', 'Contest Name', 'Victory Date', 'Victory Time'];
+ 
+    const headers = ['S.No', 'Winner Name', 'Phone Number', 'Contest Name', 'Entry Package', 'Victory Date', 'Victory Time'];
     const rows = dataToExport.map((contest, index) => [
       index + 1,
       contest.winnerId?.name || 'N/A',
       contest.winnerId?.phoneNumber || 'N/A',
       contest.eventName,
+      contest.package ? `₹${contest.package.toLocaleString()}` : 'N/A',
       new Date(contest.completedAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -405,6 +418,7 @@ export default function WinnersHistory() {
               <th>Winner Name</th>
               <th>Phone Number</th>
               <th>Contest Name</th>
+              <th>Fee</th>
               <th>Victory Date</th>
               <th>Time</th>
             </tr>
@@ -416,6 +430,7 @@ export default function WinnersHistory() {
                 <td class="winner-name">${contest.winnerId?.name || 'N/A'}</td>
                 <td class="phone">${contest.winnerId?.phoneNumber || 'N/A'}</td>
                 <td class="contest">${contest.eventName}</td>
+                <td class="package">₹${contest.package?.toLocaleString() || 'N/A'}</td>
                 <td class="date">${new Date(contest.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                 <td class="date">${new Date(contest.completedAt).toLocaleTimeString()}</td>
               </tr>
@@ -527,6 +542,25 @@ export default function WinnersHistory() {
             </select>
           </div>
 
+          {/* Filter by Package Fee */}
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">
+              Filter by Fee
+            </label>
+            <select
+              value={filterPackage}
+              onChange={(e) => setFilterPackage(e.target.value)}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-slate-900">All Packages</option>
+              {uniquePackages.map((pkg) => (
+                <option key={pkg} value={pkg.toString()} className="bg-slate-900">
+                  ₹{pkg.toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Items Per Page */}
           <div>
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">
@@ -574,16 +608,17 @@ export default function WinnersHistory() {
           <span className="text-sm text-slate-400">
             Total: <span className="text-white font-bold">{contests.length}</span> winners
           </span>
-          {searchQuery || filterContest ? (
+          {searchQuery || filterContest || filterPackage ? (
             <span className="text-sm text-slate-400">
               Showing: <span className="text-blue-400 font-bold">{filteredContests.length}</span> results
             </span>
           ) : null}
-          {(searchQuery || filterContest) && (
+          {(searchQuery || filterContest || filterPackage) && (
             <button
               onClick={() => {
                 setSearchQuery('');
                 setFilterContest('');
+                setFilterPackage('');
               }}
               className="text-xs text-rose-400 hover:text-rose-300 font-bold uppercase tracking-widest"
             >
@@ -639,6 +674,9 @@ export default function WinnersHistory() {
                       {getSortIcon('eventName')}
                     </div>
                   </th>
+                  <th className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest">
+                    Entry Fee
+                  </th>
                   <th 
                     className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('completedAt')}
@@ -680,6 +718,12 @@ export default function WinnersHistory() {
                       <div className="flex flex-col">
                         <p className="text-slate-200 font-bold text-sm">{contest.eventName}</p>
                         <span className="text-blue-500/50 text-[10px] font-black uppercase tracking-widest mt-1">Official Contest</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <p className="text-blue-400 font-black text-sm">₹{contest.package?.toLocaleString() || 'N/A'}</p>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Registration Fee</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -853,6 +897,20 @@ export default function WinnersHistory() {
                   <div>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contest Name</p>
                     <p className="text-white font-bold">{selectedContest.eventName}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-600/20 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Registration Fee</p>
+                    <p className="text-white font-bold">₹{selectedContest.package?.toLocaleString() || 'N/A'}</p>
                   </div>
                 </div>
               </div>
