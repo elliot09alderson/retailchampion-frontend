@@ -1,5 +1,17 @@
 // API Configuration
-export const API_BASE_URL = 'http://localhost:5007'; // Make sure this matches your running server
+const getApiBaseUrl = () => {
+  const { hostname, origin } = window.location;
+  
+  // If we are on localhost, use the explicit port for the backend
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+    return `http://${hostname}:5007`;
+  }
+  
+  // In production, the Nginx config proxies /api requests to the backend on the same domain
+  return origin;
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // API Endpoints
 export const API_ENDPOINTS = {
