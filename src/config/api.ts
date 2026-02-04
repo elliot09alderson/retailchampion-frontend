@@ -45,4 +45,23 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `${API_BASE_URL}/api/packages/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/packages/${id}`,
   },
+  PINS: {
+    GENERATE: `${API_BASE_URL}/api/pins/generate`,
+    LIST: `${API_BASE_URL}/api/pins`,
+    STATS: `${API_BASE_URL}/api/pins/stats`,
+    VALIDATE: `${API_BASE_URL}/api/pins/validate`,
+  },
+  VIP: {
+    LIST: `${API_BASE_URL}/api/vip`,
+    VVIP_LIST: `${API_BASE_URL}/api/vip/vvip`,
+    PROFILE: `${API_BASE_URL}/api/vip/profile`,
+    GENERATE_REFERRAL: (id: string) => `${API_BASE_URL}/api/vip/${id}/generate-referral`,
+    GET_REFERRALS: (id: string) => `${API_BASE_URL}/api/vip/${id}/referrals`,
+    VALIDATE_REFERRAL: (code: string) => `${API_BASE_URL}/api/vip/validate-referral/${code}`,
+    REGISTER_WITH_REFERRAL: `${API_BASE_URL}/api/vip/register-with-referral`,
+    VERIFY_COUPON: `${API_BASE_URL}/api/vip/verify-coupon`,
+    SET_PASSWORD: `${API_BASE_URL}/api/vip/set-password`,
+    LOGIN: `${API_BASE_URL}/api/vip/login`,
+  },
 };
+

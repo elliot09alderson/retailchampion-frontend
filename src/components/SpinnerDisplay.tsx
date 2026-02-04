@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
+import Confetti from './Confetti';
 
 interface SpinnerDisplayProps {
   lotteryId?: string | null;
-  participants?: number; // Active participants
-  totalParticipants?: number; // Total started with
+  participants?: number;
+  totalParticipants?: number;
   isSpinning?: boolean;
   onSpinComplete?: () => void;
   winnerName?: string | null;
   winnerImage?: string | null;
+  winners?: { name: string; selfieUrl?: string }[];
   onExecuteSpin?: () => void;
+  remainingParticipantsList?: { name: string; selfieUrl?: string }[];
 }
 
 export default function SpinnerDisplay({ 
@@ -19,7 +22,9 @@ export default function SpinnerDisplay({
   onSpinComplete,
   winnerName = null,
   winnerImage = null,
-  onExecuteSpin
+  winners = [],
+  onExecuteSpin,
+  remainingParticipantsList = []
 }: SpinnerDisplayProps) {
   const [rotation, setRotation] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -30,14 +35,29 @@ export default function SpinnerDisplay({
   const confettiAudioRef = useRef<HTMLAudioElement>(null);
   const onSpinCompleteRef = useRef(onSpinComplete);
 
+  // Determine if we have single or multiple winners
+  const activeWinners = winners.length > 0 ? winners : (winnerName ? [{ name: winnerName, selfieUrl: winnerImage }] : []);
+  const hasWinners = activeWinners.length > 0;
+
   // Keep ref up to date
   useEffect(() => {
     onSpinCompleteRef.current = onSpinComplete;
   }, [onSpinComplete]);
 
+  // Lock body scroll when animating
+  useEffect(() => {
+    if (animating) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [animating]);
+
   useEffect(() => {
     if (isSpinning) {
-      // Small delay to ensure state transitions are clean
       const startSpin = () => {
         setAnimating(true);
         setShowWinner(false);
@@ -47,7 +67,6 @@ export default function SpinnerDisplay({
           audioRef.current.play().catch(err => console.log('Audio play failed:', err));
         }
 
-        // Stop winner/confetti music if they were playing
         if (winnerAudioRef.current) {
           winnerAudioRef.current.pause();
           winnerAudioRef.current.currentTime = 0;
@@ -57,14 +76,12 @@ export default function SpinnerDisplay({
           confettiAudioRef.current.currentTime = 0;
         }
         
-        // Huge rotation for high-speed effect (80-100 full spins)
         const fullSpins = 80 + Math.floor(Math.random() * 20); 
         const randomDegree = Math.floor(Math.random() * 360);
         const nextRotation = rotation + (fullSpins * 360) + randomDegree;
         
         setRotation(nextRotation);
 
-        // Match the 8s transition in CSS
         setTimeout(() => {
           setAnimating(false);
           setShowWinner(true);
@@ -73,33 +90,26 @@ export default function SpinnerDisplay({
             audioRef.current.pause();
           }
 
-          // Play confetti sound whenever spin completes (for rounds 1-3)
           if (confettiAudioRef.current) {
             confettiAudioRef.current.currentTime = 0;
             confettiAudioRef.current.play().catch(err => console.log('Confetti audio play failed:', err));
           }
 
-          // Play winner music if it's the final round (winner exists)
-          if (winnerName && winnerAudioRef.current) {
+          if ((winnerName || winners.length > 0) && winnerAudioRef.current) {
             winnerAudioRef.current.play().catch(err => console.log('Winner audio play failed:', err));
           }
 
-          // Use the stable ref
           onSpinCompleteRef.current?.();
         }, 8000);
       };
 
-      // Ensure browser sees the change
       const timeoutId = setTimeout(startSpin, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [isSpinning, winnerName]); 
+  }, [isSpinning, winnerName, winners.length]);
 
-  // Reset winner visibility when lotteryId changes
   useEffect(() => {
     setShowWinner(false);
-    // Optional: Reset rotation to 0 on new lottery if desired
-    // setRotation(0);
   }, [lotteryId]);
 
   const toggleMute = () => {
@@ -110,33 +120,27 @@ export default function SpinnerDisplay({
     setIsMuted(muted);
   };
 
-  const eliminated = (totalParticipants || participants) - participants;
-
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      {/* Lottery Information - TOP */}
+    <div className="flex flex-col items-center justify-start py-4 relative w-full h-full overflow-auto">
+      {/* Background is now provided by parent SpinnerController */}
+
+      {showWinner && hasWinners && <Confetti trigger={showWinner} />}
+
+      <div className="z-10 w-full max-w-4xl flex flex-col items-center">
+      
+       {/* Lottery Information - TOP */}
       <div className="w-full max-w-md space-y-4 mb-16">
         {lotteryId ? (
           <div className="space-y-4">
             <div className="bg-blue-500/10 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-              <div className="flex justify-between items-end relative z-10">
-                <div>
-                  <p className="text-blue-300/80 text-xs mb-1 font-bold uppercase tracking-widest">Participants</p>
-                  <p className="text-white text-4xl font-black tracking-tight flex items-baseline">
+              <div className="flex justify-between items-end relative z-10 w-full">
+                <div className="w-full text-center">
+                  <p className="text-blue-300/80 text-xs mb-1 font-bold uppercase tracking-widest">Active Warriors</p>
+                  <p className="text-white text-6xl font-black tracking-tight">
                     {participants}
-                    {totalParticipants > 0 && totalParticipants !== participants && (
-                      <span className="text-xl text-blue-400/40 font-bold ml-1">/{totalParticipants}</span>
-                    )}
                   </p>
                 </div>
-                {eliminated > 0 && (
-                  <div className="text-right pb-1 group/elim">
-                    <p className="text-rose-400 text-3xl md:text-4xl font-black italic tracking-tighter uppercase animate-pulse drop-shadow-[0_0_20px_rgba(244,63,94,0.8)] [text-shadow:0_0_10px_rgba(244,63,94,0.5)]">
-                      {eliminated} <span className="text-base md:text-lg border-l border-white/20 ml-2 pl-2 opacity-80 not-italic tracking-widest leading-none">FLUSHED OUT</span>
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -149,7 +153,7 @@ export default function SpinnerDisplay({
       </div>
 
       {/* Spinning Wheel - MIDDLE */}
-      <div className="relative w-64 h-64 md:w-96 md:h-96 mb-16 group">
+      <div className="relative w-64 h-64 md:w-96 md:h-96 mb-6 group">
         {/* Outer neon radiation */}
         <div className="absolute inset-0 bg-blue-600/20 rounded-full blur-[80px] animate-pulse" />
         <div className="absolute inset-0 bg-rose-600/10 rounded-full blur-[60px] animate-pulse delay-700" />
@@ -205,55 +209,9 @@ export default function SpinnerDisplay({
         </div>
       </div>
 
-      {/* Winner Announcement - RGB GRADIENT */}
-      {showWinner && winnerName && (
-        <div className="w-full max-w-2xl mb-6 fade-in">
-          <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl p-1 shadow-2xl animate-pulse">
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-8 md:p-12 text-center">
-              {/* Winner Photo & Trophy */}
-              <div className="flex flex-col items-center justify-center mb-6">
-                {winnerImage ? (
-                  <div className="relative mb-6">
-                    <img 
-                      src={winnerImage} 
-                      alt={winnerName || 'Winner'} 
-                      className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.5)] bg-slate-800"
-                    />
-                    <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-black p-2 rounded-full shadow-lg border-2 border-slate-900">
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    </div>
-                  </div>
-                ) : (
-                  <svg className="w-20 h-20 md:w-24 md:h-24 text-yellow-400 animate-bounce" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                )}
-              </div>
-              
-              {/* Winner Label */}
-              <p className="text-gray-400 text-lg md:text-xl font-medium uppercase tracking-widest mb-4">
-                🎉 Grand Winner 🎉
-              </p>
-              
-              {/* Winner Name with RGB Gradient */}
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-4 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient-x leading-tight">
-                {winnerName}
-              </h1>
-              
-              {/* Congratulations */}
-              <p className="text-white text-xl md:text-2xl font-semibold mt-6">
-                Congratulations! 🎊
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Execute Spin Button - BOTTOM */}
-      {lotteryId && (
-        <div className="w-full max-w-md mt-6">
+      {/* Execute Spin Button - Directly below spinner */}
+      {lotteryId && !hasWinners && (
+        <div className="w-full max-w-md mt-4 mb-8">
           <button
             onClick={onExecuteSpin}
             disabled={animating || participants === 0}
@@ -273,6 +231,70 @@ export default function SpinnerDisplay({
           </button>
         </div>
       )}
+
+      {/* Winner Announcement - Multiple Winners Support */}
+      {showWinner && hasWinners && (
+        <div className="w-full max-w-5xl mb-12 fade-in">
+             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 justify-center items-center">
+               {activeWinners.map((winner, idx) => (
+                  <div key={idx} className="relative bg-gradient-to-b from-yellow-500/20 to-black/40 rounded-2xl p-4 border border-yellow-500/30 flex flex-col items-center animate-in zoom-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: `${idx * 150}ms` }}>
+                      <div className="relative mb-3">
+                          <img 
+                            src={winner.selfieUrl || '/placeholder.png'} 
+                            alt={winner.name} 
+                            className="w-24 h-24 rounded-full object-cover border-2 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                          />
+                          <div className="absolute -top-2 -right-2 bg-yellow-500 text-black w-6 h-6 flex items-center justify-center rounded-full font-bold text-xs shadow-lg">#{idx+1}</div>
+                      </div>
+                      <h3 className="text-white font-bold text-lg text-center leading-tight mb-1">{winner.name}</h3>
+                      <p className="text-yellow-400/80 text-[10px] uppercase tracking-widest font-bold">Champion</p>
+                  </div>
+               ))}
+             </div>
+             <div className="text-center mt-8">
+                <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 bg-clip-text text-transparent animate-gradient-x mb-2">
+                    CONGRATULATIONS!
+                </h1>
+                <p className="text-white/60 text-lg font-medium">Retail Champions {new Date().getFullYear()}</p>
+             </div>
+        </div>
+      )}
+
+      {/* Remaining Participants List - Show after spinner stops (when not animating) */}
+      {!animating && remainingParticipantsList.length > 0 && (
+         <div className="w-full max-w-6xl mt-8 px-4">
+             <div className="flex items-center gap-3 mb-4">
+                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                 <span className="text-blue-400 font-bold uppercase tracking-widest text-xs">
+                   {showWinner ? 'Remaining Contenders' : 'Active Contenders'}
+                 </span>
+                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+             </div>
+             
+             <div className="flex flex-wrap justify-center gap-3">
+                 {remainingParticipantsList.map((p, i) => (
+                     <div key={i} className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 flex items-center gap-2 hover:bg-white/10 transition-colors">
+                         {p.selfieUrl ? (
+                           <img 
+                             src={p.selfieUrl} 
+                             alt={p.name} 
+                             className="w-6 h-6 rounded-full object-cover border border-emerald-500/50"
+                           />
+                         ) : (
+                           <div className="w-6 h-6 rounded-full bg-emerald-500/30 flex items-center justify-center text-[10px] text-emerald-300 font-bold">
+                             {p.name?.charAt(0)?.toUpperCase() || '?'}
+                           </div>
+                         )}
+                         <span className="text-slate-200 text-xs font-medium">{p.name}</span>
+                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                     </div>
+                 ))}
+             </div>
+         </div>
+      )}
+
+      
+      </div>
 
       {/* Audio elements */}
       <audio ref={audioRef} src="/mp3/kbc_4.mp3" preload="auto" />

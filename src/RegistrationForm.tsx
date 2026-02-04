@@ -30,6 +30,12 @@ const registrationSchema = Yup.object().shape({
     .transform((value) => value === '' ? null : value),
   package: Yup.number()
     .required('Package selection is required'),
+  pin: Yup.string()
+    .required('Package PIN is required'),
+  referralCode: Yup.string()
+    .optional()
+    .nullable()
+    .transform((value) => value === '' ? null : value),
   userImage: Yup.mixed()
     .optional()
     .nullable()
@@ -58,6 +64,8 @@ interface FormValues {
   panNumber: string;
   registrationId: string;
   package: number;
+  pin: string;
+  referralCode: string;
   userImage: File | null;
   selfie: File | null;
 }
@@ -97,7 +105,9 @@ export default function RegistrationForm() {
     aadhaarNumber: '',
     panNumber: '',
     registrationId: '',
-    package: 0, // Will be set after fetching packages
+    package: 0,
+    pin: '',
+    referralCode: '',
     userImage: null,
     selfie: null,
   };
@@ -123,6 +133,18 @@ export default function RegistrationForm() {
     try {
       setSubmitting(true);
       
+      // Check if VIP package is selected
+      const isVipPackage = availablePackages.find(pkg => pkg.isVip && values.package === pkg.amount);
+      
+      
+      // PIN is always required now
+      if (!values.pin) {
+        setErrors({ pin: 'PIN is required' });
+        toast.error('Please enter the package PIN');
+        setSubmitting(false);
+        return;
+      }
+      
       // Create FormData for multipart/form-data
       const formData = new FormData();
       formData.append('name', values.name);
@@ -135,6 +157,18 @@ export default function RegistrationForm() {
         formData.append('registrationId', values.registrationId);
       }
       formData.append('package', values.package.toString());
+      
+      // For VIP packages, append referral code
+      if (isVipPackage) {
+        if (values.referralCode) {
+          formData.append('referralCode', values.referralCode.toUpperCase());
+        }
+        formData.append('isVipRegistration', 'true');
+      }
+      
+      // Always append PIN
+      formData.append('pin', values.pin);
+      
       if (values.userImage) {
         formData.append('image', values.userImage);
       }
@@ -284,26 +318,31 @@ export default function RegistrationForm() {
                   <ErrorMessage name="name" component="div" className="text-[#ef4444] text-xs font-normal" />
                 </div>
 
-                {/* Package Selection */}
-                <div className="space-y-3">
+                {/* Package Selection - VIP First */}
+                <div className="space-y-4">
                   <label className="block text-sm font-medium text-[#334155]">
                     Select Contest Package <span className="text-[#ef4444]">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {loadingPackages ? (
-                      <div className="col-span-2 text-center py-4 text-slate-400 font-medium">Loading packages...</div>
-                    ) : availablePackages.length === 0 ? (
-                      <div className="col-span-2 text-center py-4 text-rose-500 font-bold uppercase tracking-widest text-xs">No active packages available</div>
-                    ) : (
-                      availablePackages.map((pkg) => (
+                  
+                  {loadingPackages ? (
+                    <div className="text-center py-4 text-slate-400 font-medium">Loading packages...</div>
+                  ) : availablePackages.length === 0 ? (
+                    <div className="text-center py-4 text-rose-500 font-bold uppercase tracking-widest text-xs">No active packages available</div>
+                  ) : (
+                    <>
+                      {/* VIP Package - Highlighted */}
+                      {availablePackages.filter(pkg => pkg.isVip).map((pkg) => (
                         <label
                           key={pkg._id}
-                          className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          className={`relative block p-5 rounded-2xl border-2 cursor-pointer transition-all overflow-hidden ${
                             values.package === pkg.amount
-                              ? 'border-blue-600 bg-blue-50/50 shadow-sm'
-                              : 'border-[#e2e8f0] bg-white hover:border-[#334155]'
+                              ? 'border-amber-500 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-lg shadow-amber-500/10'
+                              : 'border-amber-200 bg-gradient-to-r from-amber-50/50 to-yellow-50/50 hover:border-amber-400'
                           }`}
                         >
+                          <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-yellow-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
+                            ⭐ VIP
+                          </div>
                           <Field
                             type="radio"
                             name="package"
@@ -311,27 +350,113 @@ export default function RegistrationForm() {
                             className="hidden"
                             onChange={() => setFieldValue('package', pkg.amount)}
                           />
-                          <div className="text-center">
-                            <p className={`text-xl font-black ${values.package === pkg.amount ? 'text-blue-600' : 'text-[#334155]'}`}>
-                              ₹{pkg.amount.toLocaleString()}
-                            </p>
-                            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${values.package === pkg.amount ? 'text-blue-500' : 'text-slate-400'}`}>
-                              {pkg.name || 'Package'}
-                            </p>
-                          </div>
-                          {values.package === pkg.amount && (
-                            <div className="absolute top-2 right-2">
-                              <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          <div className="flex items-center gap-4">
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                              values.package === pkg.amount 
+                                ? 'bg-gradient-to-tr from-amber-400 to-yellow-500 shadow-lg shadow-amber-500/30' 
+                                : 'bg-gradient-to-tr from-amber-100 to-yellow-100'
+                            }`}>
+                              <svg className={`w-7 h-7 ${values.package === pkg.amount ? 'text-white' : 'text-amber-500'}`} fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                               </svg>
                             </div>
-                          )}
+                            <div className="flex-1">
+                              <p className={`text-2xl font-black ${values.package === pkg.amount ? 'text-amber-600' : 'text-amber-700'}`}>
+                                ₹{pkg.amount.toLocaleString()}
+                              </p>
+                              <p className="text-amber-600 text-xs font-bold mt-0.5">{pkg.name || 'VIP Package'}</p>
+                              <p className="text-amber-500/70 text-[10px] mt-1">Exclusive VIP benefits • Referral rewards • Priority access</p>
+                            </div>
+                            {values.package === pkg.amount && (
+                              <div className="text-amber-500">
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                         </label>
-                      ))
-                    )}
-                  </div>
+                      ))}
+
+                      {/* Referral Code Input - Only for VIP */}
+                      {availablePackages.find(pkg => pkg.isVip && values.package === pkg.amount) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                          <label className="block text-xs font-bold text-amber-700 uppercase tracking-widest">
+                            Referral Code <span className="text-amber-500 font-normal">(Optional)</span>
+                          </label>
+                          <Field
+                            type="text"
+                            name="referralCode"
+                            placeholder="Enter VIP referral code if you have one"
+                            className="w-full px-4 py-3 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:outline-none transition-all bg-white text-amber-800 placeholder-amber-400 uppercase tracking-widest font-bold text-center"
+                          />
+                          <p className="text-[10px] text-amber-600 text-center">
+                            No referral code? You'll be registered as a new VIP under admin
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Other Packages - Dropdown */}
+                      {availablePackages.filter(pkg => !pkg.isVip).length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">— OR SELECT OTHER PACKAGE —</p>
+                          <div className="relative">
+                            <select
+                              value={availablePackages.find(pkg => !pkg.isVip && values.package === pkg.amount) ? values.package : ''}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setFieldValue('package', Number(e.target.value));
+                                  setFieldValue('referralCode', ''); // Clear referral code for non-VIP
+                                }
+                              }}
+                              className={`w-full px-4 py-4 rounded-xl border-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all bg-white text-[#334155] font-bold appearance-none cursor-pointer ${
+                                availablePackages.find(pkg => !pkg.isVip && values.package === pkg.amount)
+                                  ? 'border-blue-500 bg-blue-50/50'
+                                  : 'border-[#e2e8f0] hover:border-slate-300'
+                              }`}
+                            >
+                              <option value="">Select a regular package...</option>
+                              {availablePackages.filter(pkg => !pkg.isVip).map((pkg) => (
+                                <option key={pkg._id} value={pkg.amount}>
+                                  ₹{pkg.amount.toLocaleString()} — {pkg.name || 'Package'}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <ErrorMessage name="package" component="div" className="text-[#ef4444] text-xs font-normal" />
                 </div>
+
+                {/* PIN Field - Always Visible */}
+                <div className="space-y-2">
+                  <label htmlFor="pin" className="block text-sm font-medium text-[#334155]">
+                    Package PIN <span className="text-[#ef4444]">*</span>
+                  </label>
+                    <Field
+                      type="text"
+                      id="pin"
+                      name="pin"
+                      placeholder="Enter the 6-character PIN provided by Admin"
+                      className={`w-full px-4 py-3 rounded-md border ${
+                        errors.pin && touched.pin
+                          ? 'border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] focus:border-[#ef4444]'
+                          : 'border-[#e2e8f0] focus:ring-1 focus:ring-[#334155] focus:border-[#334155]'
+                      } focus:outline-none transition-all bg-white text-[#1f2937] placeholder-[#94a3b8] uppercase tracking-widest font-bold`}
+                    />
+                    <ErrorMessage
+                      name="pin"
+                      component="div"
+                      className="text-[#ef4444] text-xs font-normal"
+                    />
+                  </div>
 
                 {/* Phone Number Field */}
                 <div className="space-y-2">
@@ -515,12 +640,14 @@ export default function RegistrationForm() {
           </Formik>
         </div>
         {/* Footer */}
-        <p className="text-center text-sm text-[#64748b] mt-8">
-          Already registered?{' '}
-          <a href="#" className="text-[#334155] hover:text-[#0f172a] font-medium transition-colors underline-offset-2 hover:underline">
-            Sign in here
-          </a>
-        </p>
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-sm text-[#64748b]">
+            Already a VIP?{' '}
+            <a href="/vip/login" className="text-amber-600 hover:text-amber-700 font-bold transition-colors underline-offset-2 hover:underline">
+              Access VIP Portal
+            </a>
+          </p>
+        </div>
       </div>
 
       {/* Success Modal */}
@@ -531,19 +658,82 @@ export default function RegistrationForm() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[40px] -mr-16 -mt-16" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/5 blur-[40px] -ml-16 -mb-16" />
 
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+            {/* VIP Badge */}
+            {registrationData.vipStatus === 'vip' && (
+              <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                VIP
+              </div>
+            )}
+
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+              registrationData.vipStatus === 'vip' 
+                ? 'bg-gradient-to-tr from-amber-100 to-yellow-100'
+                : 'bg-emerald-100'
+            }`}>
+              {registrationData.vipStatus === 'vip' ? (
+                <svg className="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              ) : (
+                <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
             </div>
 
-            <h2 className="text-3xl font-black text-[#0f172a] mb-2 tracking-tight uppercase">Registration Successful!</h2>
+            <h2 className="text-3xl font-black text-[#0f172a] mb-2 tracking-tight uppercase">
+              {registrationData.vipStatus === 'vip' ? 'VIP Registration Successful!' : 'Registration Successful!'}
+            </h2>
             <p className="text-[#64748b] font-medium mb-8">Welcome to Retail Champions, {registrationData.name}!</p>
 
-            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 mb-8 relative">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 py-1 border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Your Coupon Code</span>
-              <p className="text-4xl font-black text-blue-600 tracking-[0.1em] font-mono">{registrationData.couponCode}</p>
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 mb-6 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 py-1 border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 whitespace-nowrap">Your Coupon Code</span>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-wider font-mono truncate ${registrationData.vipStatus === 'vip' ? 'text-amber-600' : 'text-blue-600'}`}>
+                  {registrationData.couponCode}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(registrationData.couponCode);
+                    toast.success('Copied to clipboard!', {
+                      icon: '📋',
+                      style: {
+                        borderRadius: '10px',
+                        background: '#333',
+                        color: '#fff',
+                        fontSize: '12px'
+                      },
+                    });
+                  }}
+                  className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:scale-105 active:scale-95 transition-all shadow-sm group"
+                  title="Copy Code"
+                >
+                  <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
             </div>
+
+            {/* VIP Portal Link */}
+            {registrationData.vipStatus === 'vip' && (
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 mb-6">
+                <p className="text-amber-700 text-sm font-bold mb-2">🎉 Congrats! You're now a VIP</p>
+                <p className="text-amber-600 text-xs mb-3">Access your VIP dashboard to track referrals and rewards</p>
+                <a 
+                  href="/vip/login"
+                  className="inline-flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  Access VIP Profile
+                </a>
+              </div>
+            )}
 
             <div className="space-y-4">
               <p className="text-sm font-bold text-[#334155] uppercase tracking-wider mb-2">Join our community</p>
