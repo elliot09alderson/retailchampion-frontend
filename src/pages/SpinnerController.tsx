@@ -5,7 +5,6 @@ import { API_ENDPOINTS } from '../config/api';
 export default function SpinnerController() {
   const [lotteryId, setLotteryId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [totalParticipants, setTotalParticipants] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winnerName, setWinnerName] = useState<string | null>(null);
@@ -91,9 +90,8 @@ export default function SpinnerController() {
              setWinnerImage(null);
         }
 
-        if (totalParticipants === 0) setTotalParticipants(data.data.length);
-      }
-    } catch(err) {}
+        }
+      } catch(err) {}
   };
 
   const handleCreateLottery = async () => {
@@ -132,7 +130,6 @@ export default function SpinnerController() {
   const handleReset = () => {
     setLotteryId(null);
     setParticipants([]);
-    setTotalParticipants(0);
     setWinnerName(null);
     setWinners([]);
     setEventName('');
@@ -266,7 +263,6 @@ export default function SpinnerController() {
              <SpinnerDisplay 
                 lotteryId={lotteryId}
                 participants={participants.length}
-                totalParticipants={totalParticipants || participants.length}
                 isSpinning={isSpinning}
                 onExecuteSpin={handleExecuteSpin}
                 onSpinComplete={handleSpinComplete}

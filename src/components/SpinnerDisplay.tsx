@@ -4,7 +4,6 @@ import Confetti from './Confetti';
 interface SpinnerDisplayProps {
   lotteryId?: string | null;
   participants?: number;
-  totalParticipants?: number;
   isSpinning?: boolean;
   onSpinComplete?: () => void;
   winnerName?: string | null;
@@ -17,7 +16,6 @@ interface SpinnerDisplayProps {
 export default function SpinnerDisplay({ 
   lotteryId, 
   participants = 0,
-  totalParticipants = 0,
   isSpinning = false,
   onSpinComplete,
   winnerName = null,
