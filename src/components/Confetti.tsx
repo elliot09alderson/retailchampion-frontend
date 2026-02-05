@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import confetti from 'canvas-confetti';
 
 interface ConfettiProps {
   trigger: boolean;
@@ -6,48 +7,51 @@ interface ConfettiProps {
 }
 
 export default function Confetti({ trigger, onComplete }: ConfettiProps) {
-  const [isActive, setIsActive] = useState(false);
-
   useEffect(() => {
     if (trigger) {
-      setIsActive(true);
-      // Auto-dismiss after 4 seconds
-      const timer = setTimeout(() => {
-        setIsActive(false);
-        onComplete?.();
-      }, 4000);
-      
-      return () => clearTimeout(timer);
+      // Create a nice burst effect using canvas-confetti
+      const duration = 5000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+      const randomInRange = (min: number, max: number) => {
+        return Math.random() * (max - min) + min;
+      };
+
+      // Initial Burst
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        zIndex: 9999,
+        colors: ['#FFE400', '#FFBD00', '#E89400', '#FFCA6C', '#FDFFB8'] // Gold/Yellow theme
+      });
+
+      // Continuous fireworks for a few seconds
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        
+        // Random locations confetti
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, zIndex: 9999 });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, zIndex: 9999 });
+      }, 250);
+
+      const to = setTimeout(() => {
+          onComplete?.();
+      }, duration);
+
+      return () => {
+          clearInterval(interval);
+          clearTimeout(to);
+      };
     }
   }, [trigger, onComplete]);
 
-  if (!isActive) return null;
-
-  // Generate 50 confetti pieces with random properties
-  const confettiPieces = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: Math.random() * 0.5,
-    duration: 2 + Math.random() * 2,
-    color: ['#334155', '#64748b', '#94a3b8', '#cbd5e1', '#10b981', '#eab308'][
-      Math.floor(Math.random() * 6)
-    ],
-  }));
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-      {confettiPieces.map((piece) => (
-        <div
-          key={piece.id}
-          className="confetti-piece absolute top-0 w-3 h-3 opacity-0"
-          style={{
-            left: `${piece.left}%`,
-            backgroundColor: piece.color,
-            animationDelay: `${piece.delay}s`,
-            animationDuration: `${piece.duration}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
+  return null;
 }

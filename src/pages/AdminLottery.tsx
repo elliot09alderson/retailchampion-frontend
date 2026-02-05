@@ -6,6 +6,7 @@ import WinnersHistory from '../components/WinnersHistory.tsx';
 import PackagesManagement from '../components/PackagesManagement';
 import PinManagement from '../components/PinManagement';
 import ContestHistory from '../components/ContestHistory';
+import ContestCreation from '../components/ContestCreation';
 
 interface Contest {
   _id: string;
@@ -23,7 +24,7 @@ interface Package {
   name: string;
 }
 
-type ViewType = 'info' | 'users' | 'winners' | 'history' | 'packages' | 'pins';
+type ViewType = 'info' | 'create_contest' | 'users' | 'winners' | 'history' | 'packages' | 'pins';
 
 export default function AdminLottery() {
   const [activeView, setActiveView] = useState<ViewType>('info');
@@ -32,6 +33,7 @@ export default function AdminLottery() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [winnersFilters, setWinnersFilters] = useState<{ contest?: string, package?: string }>({});
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Fetch dashboard data
@@ -95,6 +97,9 @@ export default function AdminLottery() {
   const menuItems = [
     { id: 'info', label: 'Dashboard', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+    )},
+    { id: 'create_contest', label: 'Create Contest', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
     )},
     { id: 'users', label: 'Users', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -341,9 +346,17 @@ export default function AdminLottery() {
                                 <OperationalGuidelines />
                             </div>
                         )}
+                        {activeView === 'create_contest' && <ContestCreation />}
                         {activeView === 'users' && <UsersManagement />}
-                        {activeView === 'winners' && <WinnersHistory />}
-                        {activeView === 'history' && <ContestHistory />}
+                        {activeView === 'winners' && <WinnersHistory initialFilters={winnersFilters} />}
+                        {activeView === 'history' && (
+                            <ContestHistory 
+                                onNavigateWinners={(contestName, packageAmount) => {
+                                    setWinnersFilters({ contest: contestName, package: packageAmount });
+                                    setActiveView('winners');
+                                }} 
+                            />
+                        )}
                         {activeView === 'packages' && <PackagesManagement />}
                         {activeView === 'pins' && <PinManagement />}
                      </div>

@@ -17,10 +17,16 @@ interface Contest {
   status: string;
   createdAt: string;
   completedAt: string;
+  startDate?: string;
+  endDate?: string;
   winnerId: Winner;
 }
 
-export default function ContestHistory() {
+interface ContestHistoryProps {
+  onNavigateWinners?: (contestName: string, packageAmount: string) => void;
+}
+
+export default function ContestHistory({ onNavigateWinners }: ContestHistoryProps) {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterPackage, setFilterPackage] = useState<string>('');
@@ -119,7 +125,8 @@ export default function ContestHistory() {
           filteredContests.map((contest) => (
             <div
               key={contest._id}
-              className="group bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 hover:border-blue-500/30 p-6 rounded-3xl transition-all duration-300 relative overflow-hidden"
+              onClick={() => onNavigateWinners?.(contest.eventName, contest.package?.toString())}
+              className="group bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 hover:border-blue-500/30 p-6 rounded-3xl transition-all duration-300 relative overflow-hidden cursor-pointer"
             >
               {/* Decorative side bar */}
               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600/50 group-hover:bg-blue-500 transition-colors" />
@@ -139,6 +146,16 @@ export default function ContestHistory() {
                       })}
                     </span>
                   </div>
+                  
+                  {/* Date Range */}
+                  {(contest.startDate && contest.endDate) && (
+                      <div className="flex items-center gap-1 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          <span className="text-slate-500">Event:</span>
+                          <span className="text-white">{new Date(contest.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span className="text-slate-600">-</span>
+                          <span className="text-white">{new Date(contest.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                  )}
                   <h3 className="text-2xl font-black text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">
                     {contest.eventName}
                   </h3>
@@ -150,7 +167,7 @@ export default function ContestHistory() {
                 {/* Winner Card */}
                 {contest.winnerId && (
                   <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 w-full lg:w-auto">
-                    <div className="relative cursor-pointer" onClick={() => setPreviewImage(contest.winnerId.selfieUrl)}>
+                    <div className="relative cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImage(contest.winnerId.selfieUrl); }}>
                       <img
                         src={contest.winnerId.selfieUrl}
                         alt={contest.winnerId.name}

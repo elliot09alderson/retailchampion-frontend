@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
     REGISTER: (id: string) => `${API_BASE_URL}/api/lottery/${id}/register`,
     SEED_PARTICIPANTS: `${API_BASE_URL}/api/lottery/seed/participants`,
     HISTORY: `${API_BASE_URL}/api/lottery/history`,
+    SELECTABLE: `${API_BASE_URL}/api/lottery/selectable`,
     DELETE: (id: string) => `${API_BASE_URL}/api/lottery/${id}`,
     DELETE_ALL: `${API_BASE_URL}/api/lottery/history/all`,
   },
@@ -38,6 +39,7 @@ export const API_ENDPOINTS = {
     GET_BY_ID: (id: string) => `${API_BASE_URL}/api/users/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/users/${id}`,
     DELETE_ALL: `${API_BASE_URL}/api/users`,
+    COUNT: `${API_BASE_URL}/api/users/count`,
   },
   PACKAGES: {
     LIST: `${API_BASE_URL}/api/packages`,

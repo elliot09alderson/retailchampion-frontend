@@ -13,14 +13,34 @@ interface Contest {
   eventName: string;
   completedAt: string;
   winnerId: Winner;
+  winners?: Winner[];
   package?: number;
   totalParticipants?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+interface WinnerEntry {
+  _id: string; // Contest ID
+  eventName: string;
+  completedAt: string;
+  package?: number;
+  winner: Winner;
+  startDate?: string;
+  endDate?: string;
 }
 
 type SortField = 'name' | 'eventName' | 'completedAt';
 type SortOrder = 'asc' | 'desc';
 
-export default function WinnersHistory() {
+interface WinnersHistoryProps {
+  initialFilters?: {
+    contest?: string;
+    package?: string;
+  };
+}
+
+export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,8 +61,13 @@ export default function WinnersHistory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('completedAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const [filterContest, setFilterContest] = useState('');
-  const [filterPackage, setFilterPackage] = useState<string>('');
+  const [filterContest, setFilterContest] = useState(initialFilters?.contest || '');
+  const [filterPackage, setFilterPackage] = useState<string>(initialFilters?.package || '');
+  
+  useEffect(() => {
+    if (initialFilters?.contest) setFilterContest(initialFilters.contest);
+    if (initialFilters?.package) setFilterPackage(initialFilters.package);
+  }, [initialFilters]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -143,18 +168,49 @@ export default function WinnersHistory() {
     return (packages as number[]).sort((a, b) => a - b);
   }, [contests]);
 
-  // Filter, search, and sort contests
-  const filteredContests = useMemo(() => {
-    let result = [...contests];
+  // Flatten contests into individual winner rows
+  const flattenedData = useMemo(() => {
+    const entries: WinnerEntry[] = [];
+    contests.forEach(contest => {
+      if (contest.winners && contest.winners.length > 0) {
+        contest.winners.forEach(winner => {
+          entries.push({
+            _id: contest._id,
+            eventName: contest.eventName,
+            completedAt: contest.completedAt,
+            package: contest.package,
+            winner: winner,
+            startDate: contest.startDate,
+            endDate: contest.endDate
+          });
+        });
+      } else if (contest.winnerId) {
+         entries.push({
+            _id: contest._id,
+            eventName: contest.eventName,
+            completedAt: contest.completedAt,
+            package: contest.package,
+            winner: contest.winnerId,
+            startDate: contest.startDate,
+            endDate: contest.endDate
+         });
+      }
+    });
+    return entries;
+  }, [contests]);
+
+  // Filter, search, and sort rows
+  const filteredData = useMemo(() => {
+    let result = [...flattenedData];
 
     // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (c) =>
-          c.winnerId?.name?.toLowerCase().includes(query) ||
-          c.winnerId?.phoneNumber?.includes(query) ||
-          c.eventName?.toLowerCase().includes(query)
+        (entry) =>
+          entry.winner?.name?.toLowerCase().includes(query) ||
+          entry.winner?.phoneNumber?.includes(query) ||
+          entry.eventName?.toLowerCase().includes(query)
       );
     }
 
@@ -175,8 +231,8 @@ export default function WinnersHistory() {
 
       switch (sortField) {
         case 'name':
-          valueA = a.winnerId?.name?.toLowerCase() || '';
-          valueB = b.winnerId?.name?.toLowerCase() || '';
+          valueA = a.winner?.name?.toLowerCase() || '';
+          valueB = b.winner?.name?.toLowerCase() || '';
           break;
         case 'eventName':
           valueA = a.eventName?.toLowerCase() || '';
@@ -194,14 +250,14 @@ export default function WinnersHistory() {
     });
 
     return result;
-  }, [contests, searchQuery, filterContest, sortField, sortOrder]);
+  }, [flattenedData, searchQuery, filterContest, filterPackage, sortField, sortOrder]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredContests.length / limit);
-  const paginatedContests = useMemo(() => {
+  const totalPages = Math.ceil(filteredData.length / limit);
+  const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * limit;
-    return filteredContests.slice(start, start + limit);
-  }, [filteredContests, currentPage, limit]);
+    return filteredData.slice(start, start + limit);
+  }, [filteredData, currentPage, limit]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -238,22 +294,22 @@ export default function WinnersHistory() {
 
   // Export to CSV
   const exportToCSV = () => {
-    const dataToExport = filteredContests;
+    const dataToExport = filteredData;
     if (dataToExport.length === 0) return;
  
     const headers = ['S.No', 'Winner Name', 'Phone Number', 'Contest Name', 'Entry Package', 'Victory Date', 'Victory Time'];
-    const rows = dataToExport.map((contest, index) => [
+    const rows = dataToExport.map((entry, index) => [
       index + 1,
-      contest.winnerId?.name || 'N/A',
-      contest.winnerId?.phoneNumber || 'N/A',
-      contest.eventName,
-      contest.package ? `₹${contest.package.toLocaleString()}` : 'N/A',
-      new Date(contest.completedAt).toLocaleDateString('en-US', {
+      entry.winner.name || 'N/A',
+      entry.winner.phoneNumber || 'N/A',
+      entry.eventName,
+      entry.package ? `₹${entry.package.toLocaleString()}` : 'N/A',
+      new Date(entry.completedAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       }),
-      new Date(contest.completedAt).toLocaleTimeString(),
+      new Date(entry.completedAt).toLocaleTimeString(),
     ]);
 
     const csvContent = [
@@ -274,7 +330,7 @@ export default function WinnersHistory() {
 
   // Export to PDF
   const exportToPDF = () => {
-    const dataToExport = filteredContests;
+    const dataToExport = filteredData;
     if (dataToExport.length === 0) return;
 
     // Create a new window for printing
@@ -424,15 +480,15 @@ export default function WinnersHistory() {
             </tr>
           </thead>
           <tbody>
-            ${dataToExport.map((contest, index) => `
+            ${dataToExport.map((entry, index) => `
               <tr>
                 <td>${index + 1}</td>
-                <td class="winner-name">${contest.winnerId?.name || 'N/A'}</td>
-                <td class="phone">${contest.winnerId?.phoneNumber || 'N/A'}</td>
-                <td class="contest">${contest.eventName}</td>
-                <td class="package">₹${contest.package?.toLocaleString() || 'N/A'}</td>
-                <td class="date">${new Date(contest.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                <td class="date">${new Date(contest.completedAt).toLocaleTimeString()}</td>
+                <td class="winner-name">${entry.winner.name || 'N/A'}</td>
+                <td class="phone">${entry.winner.phoneNumber || 'N/A'}</td>
+                <td class="contest">${entry.eventName}</td>
+                <td class="package">₹${entry.package?.toLocaleString() || 'N/A'}</td>
+                <td class="date">${new Date(entry.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                <td class="date">${new Date(entry.completedAt).toLocaleTimeString()}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -610,7 +666,7 @@ export default function WinnersHistory() {
           </span>
           {searchQuery || filterContest || filterPackage ? (
             <span className="text-sm text-slate-400">
-              Showing: <span className="text-blue-400 font-bold">{filteredContests.length}</span> results
+              Showing: <span className="text-blue-400 font-bold">{filteredData.length}</span> results
             </span>
           ) : null}
           {(searchQuery || filterContest || filterPackage) && (
@@ -635,7 +691,7 @@ export default function WinnersHistory() {
             <div className="inline-block w-16 h-16 border-4 border-white/10 border-t-white rounded-full animate-spin"></div>
             <p className="text-slate-300 mt-6 font-bold tracking-widest uppercase text-sm">Retrieving Legends...</p>
           </div>
-        ) : paginatedContests.length === 0 ? (
+        ) : paginatedData.length === 0 ? (
           <div className="p-20 text-center">
             {error ? (
               <p className="text-rose-400 font-bold uppercase tracking-widest">{error}</p>
@@ -677,6 +733,9 @@ export default function WinnersHistory() {
                   <th className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest">
                     Entry Fee
                   </th>
+                  <th className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest">
+                    Schedule
+                  </th>
                   <th 
                     className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('completedAt')}
@@ -692,62 +751,88 @@ export default function WinnersHistory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {paginatedContests.map((contest) => (
-                  <tr key={contest._id} className="hover:bg-white/5 transition-all duration-300 group">
+                {paginatedData.map((entry, index) => (
+                  <tr key={`${entry._id}-${entry.winner._id}-${index}`} className="hover:bg-white/5 transition-all duration-300 group">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="relative cursor-pointer" onClick={() => setPreviewImage(contest.winnerId?.selfieUrl)}>
+                        <div className="relative cursor-pointer" onClick={() => setPreviewImage(entry.winner.selfieUrl)}>
                           <img
-                            src={contest.winnerId?.selfieUrl || 'https://via.placeholder.com/150?text=HP'}
-                            alt={contest.winnerId?.name}
+                            src={entry.winner.selfieUrl || 'https://via.placeholder.com/150'}
+                            alt={entry.winner.name}
                             className="w-12 h-12 rounded-full object-cover border-2 border-yellow-500/50 group-hover:border-yellow-500 transition-all shadow-lg"
                           />
-                          <div className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full p-1 border-2 border-[#0f172a]">
-                            <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          </div>
                         </div>
                         <div>
-                          <p className="text-white font-bold text-sm">{contest.winnerId?.name || 'N/A'}</p>
-                          <p className="text-blue-400 font-medium text-xs">{contest.winnerId?.phoneNumber || 'N/A'}</p>
+                          <p className="text-white font-bold text-sm">{entry.winner.name || 'N/A'}</p>
+                          <p className="text-blue-400 font-medium text-xs">{entry.winner.phoneNumber || 'N/A'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <p className="text-slate-200 font-bold text-sm">{contest.eventName}</p>
+                        <p className="text-slate-200 font-bold text-sm">{entry.eventName}</p>
                         <span className="text-blue-500/50 text-[10px] font-black uppercase tracking-widest mt-1">Official Contest</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <p className="text-blue-400 font-black text-sm">₹{contest.package?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-blue-400 font-black text-sm">₹{entry.package?.toLocaleString() || 'N/A'}</p>
                         <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Registration Fee</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
+                      {entry.startDate ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Start</span>
+                            <span className="text-white text-xs font-bold font-mono">
+                                {new Date(entry.startDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          {entry.endDate && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-rose-400 font-black uppercase tracking-widest">End</span>
+                            <span className="text-white text-xs font-bold font-mono">
+                                {new Date(entry.endDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-xs italic">Instant Draw</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
                       <p className="text-white font-mono text-sm">
-                        {new Date(contest.completedAt).toLocaleDateString('en-US', {
+                        {new Date(entry.completedAt).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
                         })}
                       </p>
                       <p className="text-slate-500 font-mono text-[10px] mt-1">
-                        {new Date(contest.completedAt).toLocaleTimeString()}
+                        {new Date(entry.completedAt).toLocaleTimeString()}
                       </p>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedContest(contest)}
+                          onClick={() => {
+                             setSelectedContest({
+                                _id: entry._id,
+                                eventName: entry.eventName,
+                                completedAt: entry.completedAt,
+                                package: entry.package,
+                                winnerId: entry.winner,
+                                winners: [entry.winner]
+                             });
+                          }}
                           className="px-3 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all"
                         >
                           View
                         </button>
                         <button
-                          onClick={() => setDeleteConfirmId(contest._id)}
+                          onClick={() => setDeleteConfirmId(entry._id)}
                           className="px-3 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all"
                         >
                           Delete

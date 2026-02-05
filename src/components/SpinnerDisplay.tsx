@@ -135,7 +135,7 @@ export default function SpinnerDisplay({
               <div className="flex justify-between items-end relative z-10 w-full">
                 <div className="w-full text-center">
                   <p className="text-blue-300/80 text-xs mb-1 font-bold uppercase tracking-widest">Active Warriors</p>
-                  <p className="text-white text-6xl font-black tracking-tight">
+                  <p className="text-4xl md:text-6xl font-black tracking-tight">
                     {participants}
                   </p>
                 </div>
@@ -151,7 +151,7 @@ export default function SpinnerDisplay({
       </div>
 
       {/* Spinning Wheel - MIDDLE */}
-      <div className="relative w-64 h-64 md:w-96 md:h-96 mb-6 group">
+      <div className="relative w-[75vw] h-[75vw] max-w-[280px] max-h-[280px] md:max-w-none md:w-96 md:h-96 mb-6 group">
         {/* Outer neon radiation */}
         <div className="absolute inset-0 bg-blue-600/20 rounded-full blur-[80px] animate-pulse" />
         <div className="absolute inset-0 bg-rose-600/10 rounded-full blur-[60px] animate-pulse delay-700" />
@@ -188,10 +188,10 @@ export default function SpinnerDisplay({
 
           {/* Center Command Pod */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-[#0f172a] flex flex-col items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.8)] border-4 border-white/10 backdrop-blur-2xl relative z-20">
+            <div className="w-20 h-20 md:w-36 md:h-36 rounded-full bg-[#0f172a] flex flex-col items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.8)] border-4 border-white/10 backdrop-blur-2xl relative z-20">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full animate-pulse" />
-              <span className="text-4xl md:text-5xl font-black text-white tracking-tighter relative z-10 italic">RC</span>
-              <div className="w-8 h-1 bg-blue-500 rounded-full mt-1 relative z-10 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+              <span className="text-2xl md:text-5xl font-black text-white tracking-tighter relative z-10 italic">RC</span>
+              <div className="w-6 h-1 md:w-8 bg-blue-500 rounded-full mt-1 relative z-10 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
             </div>
           </div>
         </div>
@@ -210,20 +210,20 @@ export default function SpinnerDisplay({
       {/* Execute Spin Button - Directly below spinner */}
       {lotteryId && !hasWinners && (
         <div className="w-full max-w-md mt-4 mb-8">
-          <button
+           <button
             onClick={onExecuteSpin}
             disabled={animating || participants === 0}
-            className={`w-full py-4 rounded-2xl font-black text-lg transition-all duration-300 flex items-center justify-center gap-3 shadow-[0_0_40px_rgba(0,0,0,0.3)] backdrop-blur-xl group/btn relative ${
+            className={`w-full py-3 md:py-4 rounded-2xl font-black text-sm md:text-lg transition-all duration-300 flex items-center justify-center gap-2 md:gap-3 shadow-[0_0_40px_rgba(0,0,0,0.3)] backdrop-blur-xl group/btn relative ${
               animating || participants === 0
                 ? 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
                 : 'bg-blue-900/40 text-blue-100 border border-blue-500/30 hover:bg-blue-800/60 hover:border-blue-400/50 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(37,99,235,0.2)] active:scale-95'
             }`}
           >
             <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
-            <svg className="w-6 h-6 text-blue-400 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-blue-400 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <span className="relative z-10 tracking-[0.2em] uppercase text-xs">
+            <span className="relative z-10 tracking-[0.2em] uppercase text-[10px] md:text-xs">
               {animating ? 'Synchronizing Spin...' : '⚡ Execute Champion Spin'}
             </span>
           </button>
@@ -233,19 +233,19 @@ export default function SpinnerDisplay({
       {/* Winner Announcement - Multiple Winners Support */}
       {showWinner && hasWinners && (
         <div className="w-full max-w-5xl mb-12 fade-in">
-             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 justify-center items-center">
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4 justify-center items-center px-4">
                {activeWinners.map((winner, idx) => (
-                  <div key={idx} className="relative bg-gradient-to-b from-yellow-500/20 to-black/40 rounded-2xl p-4 border border-yellow-500/30 flex flex-col items-center animate-in zoom-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: `${idx * 150}ms` }}>
-                      <div className="relative mb-3">
+                  <div key={idx} className="relative bg-gradient-to-b from-yellow-500/20 to-black/40 rounded-xl md:rounded-2xl p-3 md:p-4 border border-yellow-500/30 flex flex-col items-center animate-in zoom-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: `${idx * 150}ms` }}>
+                      <div className="relative mb-2 md:mb-3">
                           <img 
                             src={winner.selfieUrl || '/placeholder.png'} 
                             alt={winner.name} 
-                            className="w-24 h-24 rounded-full object-cover border-2 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                            className="w-16 h-16 md:w-24 md:h-24 rounded-full object-cover border-2 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
                           />
-                          <div className="absolute -top-2 -right-2 bg-yellow-500 text-black w-6 h-6 flex items-center justify-center rounded-full font-bold text-xs shadow-lg">#{idx+1}</div>
+                          <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-yellow-500 text-black w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full font-bold text-[10px] md:text-xs shadow-lg">#{idx+1}</div>
                       </div>
-                      <h3 className="text-white font-bold text-lg text-center leading-tight mb-1">{winner.name}</h3>
-                      <p className="text-yellow-400/80 text-[10px] uppercase tracking-widest font-bold">Champion</p>
+                      <h3 className="text-white font-bold text-sm md:text-lg text-center leading-tight mb-0.5 md:mb-1 truncate w-full">{winner.name}</h3>
+                      <p className="text-yellow-400/80 text-[8px] md:text-[10px] uppercase tracking-widest font-bold">Champion</p>
                   </div>
                ))}
              </div>

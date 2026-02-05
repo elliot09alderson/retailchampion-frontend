@@ -5,20 +5,16 @@ import { API_ENDPOINTS } from '../config/api';
 export default function SpinnerController() {
   const [lotteryId, setLotteryId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winnerName, setWinnerName] = useState<string | null>(null);
   const [winners, setWinners] = useState<any[]>([]);
-
   const [winnerImage, setWinnerImage] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
   const [eventName, setEventName] = useState('');
-  const [selectedPackage, setSelectedPackage] = useState<number>(0);
-  const [availablePackages, setAvailablePackages] = useState<any[]>([]);
+  const [message, setMessage] = useState(''); // Used in handleExecuteSpin error handling
+  const [availableContests, setAvailableContests] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchActiveLottery();
-    fetchPackages();
+    fetchSelectableLotteries();
   }, []);
 
   // Lock scroll when spinning
@@ -36,27 +32,25 @@ export default function SpinnerController() {
     };
   }, [isSpinning]);
 
-  const fetchPackages = async () => {
+  const fetchSelectableLotteries = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.PACKAGES.LIST);
-      const data = await response.json();
-      if (data.success) {
-        setAvailablePackages(data.data);
-        if (data.data.length > 0) setSelectedPackage(data.data[0].amount);
-      }
+        const token = localStorage.getItem('token');
+        const response = await fetch(API_ENDPOINTS.LOTTERY.SELECTABLE, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            setAvailableContests(data.data);
+            // Optionally auto-select if only one active? 
+            // User requested dropdown specifically, so let's show list
+        }
     } catch(err) { console.error(err); }
   };
 
-  const fetchActiveLottery = async () => {
-    try {
-      const response = await fetch(API_ENDPOINTS.LOTTERY.ACTIVE);
-      const data = await response.json();
-      if (data.success) {
-        setLotteryId(data.data._id);
-        setEventName(data.data.eventName);
-        fetchParticipants(data.data._id);
-      }
-    } catch(err) {}
+  const handleSelectContest = (contest: any) => {
+    setLotteryId(contest._id);
+    setEventName(contest.eventName);
+    fetchParticipants(contest._id);
   };
 
   const fetchParticipants = async (id: string) => {
@@ -94,38 +88,9 @@ export default function SpinnerController() {
       } catch(err) {}
   };
 
-  const handleCreateLottery = async () => {
-    // ... (existing implementation)
-    if (!eventName.trim()) return;
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(API_ENDPOINTS.LOTTERY.CREATE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ eventName, package: selectedPackage }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setLotteryId(data.data._id);
-        await handleSeed(data.data._id);
-      } else {
-        setMessage(data.message);
-      }
-    } catch(err) { setMessage('Failed to create'); }
-    finally { setLoading(false); }
-  };
+  // Removed handleCreateLottery
 
-  const handleSeed = async (id: string) => {
-    // ... (existing implementation)
-    const token = localStorage.getItem('token');
-    await fetch(API_ENDPOINTS.LOTTERY.SEED_PARTICIPANTS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ lotteryId: id }),
-    });
-    fetchParticipants(id);
-  };
+
 
   const handleReset = () => {
     setLotteryId(null);
@@ -133,6 +98,7 @@ export default function SpinnerController() {
     setWinnerName(null);
     setWinners([]);
     setEventName('');
+    fetchSelectableLotteries(); // Refresh list
   };
 
   const handleExecuteSpin = async () => {
@@ -150,6 +116,8 @@ export default function SpinnerController() {
       });
       const data = await response.json();
       if (data.success) {
+        // If it's a manual spin, we expect result
+        // If scheduled, backend handles it? But here we are manually triggering.
         if (data.data.isComplete) {
             if (data.data.winners && data.data.winners.length > 0) {
                  setWinners(data.data.winners);
@@ -178,38 +146,39 @@ export default function SpinnerController() {
         <div className="w-full max-w-md space-y-8">
             <div className="text-center">
                  <h1 className="text-4xl font-black tracking-tighter mb-2">Spinner<span className="text-blue-500">Controller</span></h1>
-                 <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Setup New Event</p>
+                 <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Select Event to Spin</p>
             </div>
             
-            <div className="space-y-4 bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-xl">
-                 <div>
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Event Name</label>
-                    <input type="text" value={eventName} onChange={e => setEventName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 font-bold text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="Enter name..." />
-                 </div>
-                 
-                 <div>
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Package</label>
-                    <div className="grid grid-cols-2 gap-3">
-                        {availablePackages.map(pkg => (
-                            <button 
-                              key={pkg._id} 
-                              onClick={() => setSelectedPackage(pkg.amount)}
-                              className={`p-3 rounded-xl border font-bold text-sm transition-all ${selectedPackage === pkg.amount ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                            >
-                                ₹{pkg.amount}
-                            </button>
-                        ))}
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                {availableContests.length === 0 ? (
+                    <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center">
+                        <p className="text-slate-400 font-bold mb-4">No active contests found</p>
+                        <a href="/admin/lottery" className="inline-block px-6 py-3 bg-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-500 transition-colors">Create Contest</a>
                     </div>
-                 </div>
-                 
-                 <button onClick={handleCreateLottery} disabled={loading || !eventName} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-xl shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                     {loading ? 'Initializing...' : 'Launch Controller'}
-                 </button>
-
-                 {message && <p className="text-red-400 text-xs font-bold text-center mt-2">{message}</p>}
+                ) : (
+                    availableContests.map(contest => (
+                        <button
+                            key={contest._id}
+                            onClick={() => handleSelectContest(contest)}
+                            className="w-full bg-white/5 border border-white/10 hover:border-blue-500 hover:bg-white/10 p-4 rounded-2xl transition-all group flex items-center justify-between"
+                        >
+                            <div className="text-left">
+                                <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors">{contest.eventName}</h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{contest.type || 'Scheduled'}</span>
+                                    <span className="text-slate-600">•</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">₹{contest.package}</span>
+                                </div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center group-hover:bg-blue-600 transition-colors text-blue-400 group-hover:text-white">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            </div>
+                        </button>
+                    ))
+                )}
             </div>
             
-            <div className="text-center">
+            <div className="text-center pt-4 border-t border-white/5">
                 <a href="/admin/lottery" className="text-slate-500 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">Return to Dashboard</a>
             </div>
         </div>
@@ -283,6 +252,13 @@ export default function SpinnerController() {
                      End Contest & Reset
                  </button>
              </div>
+         )}
+         {/* Error Message Toast */}
+         {message && (
+            <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-full font-bold text-sm shadow-xl z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+                {message}
+                <button onClick={() => setMessage('')} className="ml-3 hover:text-white/80">✕</button>
+            </div>
          )}
        </div>
     </div>
