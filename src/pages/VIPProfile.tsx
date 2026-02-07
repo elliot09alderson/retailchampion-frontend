@@ -12,6 +12,7 @@ interface VIPUser {
   referralCode?: string;
   package: number;
   createdAt: string;
+  gallery?: string[];
 }
 
 interface Referral {
@@ -28,16 +29,33 @@ interface ReferralStats {
   vvipCount: number;
 }
 
+interface GalleryItem {
+  _id: string;
+  imageUrl: string;
+  description?: string;
+  createdAt: string;
+}
+
 export default function VIPProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<VIPUser | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [stats, setStats] = useState<ReferralStats>({ total: 0, vipCount: 0, vvipCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProfile();
+    fetchGallery();
   }, []);
+
+  const fetchGallery = async () => {
+    try {
+        const res = await fetch(API_ENDPOINTS.GALLERY.LIST);
+        const data = await res.json();
+        if(data.success) setGalleryItems(data.data);
+    } catch(e) { console.error(e); }
+  };
 
   const fetchProfile = async () => {
     const token = localStorage.getItem('vip_token');
@@ -183,19 +201,58 @@ export default function VIPProfile() {
           </div>
         </div>
 
+        {/* Gallery Section */}
+        {galleryItems.length > 0 && (
+           <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+               <div className="flex items-center gap-3 mb-6">
+                   <div className="p-2 bg-gradient-to-tr from-yellow-400 to-amber-500 rounded-lg shadow-lg shadow-amber-500/20">
+                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                   </div>
+                   <div>
+                       <h2 className="text-xl font-black text-white">Winner's Hall of Fame</h2>
+                       <p className="text-slate-400 text-xs mt-0.5">Celebrating our champions</p>
+                   </div>
+               </div>
+               
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {galleryItems.map((item) => (
+                      <div 
+                        key={item._id} 
+                        className="group flex flex-col"
+                      >
+                          <div 
+                              className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all duration-300 transform hover:-translate-y-1 mb-3"
+                              onClick={() => window.open(item.imageUrl, '_blank')}
+                          >
+                              <img src={item.imageUrl} alt="Winner" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                                  <span className="text-white text-xs font-bold uppercase tracking-widest text-center py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">View Full</span>
+                              </div>
+                          </div>
+                          {item.description && (
+                             <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+                                 <p className="text-xs text-slate-300 font-medium leading-relaxed">{item.description}</p>
+                             </div>
+                          )}
+                      </div>
+                  ))}
+               </div>
+           </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-            <p className={`text-4xl font-black ${isVVIP ? 'text-purple-400' : 'text-amber-400'}`}>{stats.total}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">Total Referrals</p>
+             <p className={`text-4xl font-black ${isVVIP ? 'text-purple-400' : 'text-amber-400'}`}>{stats.total}</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">Total Referrals</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-            <p className="text-4xl font-black text-amber-400">{stats.vipCount}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">VIP Members</p>
+             <p className="text-4xl font-black text-amber-400">{stats.vipCount}</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">VIP Members</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-            <p className="text-4xl font-black text-purple-400">{stats.vvipCount}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">VVIP Members</p>
+             <p className="text-4xl font-black text-purple-400">{stats.vvipCount}</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">VVIP Members</p>
           </div>
         </div>
 

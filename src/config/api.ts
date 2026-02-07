@@ -65,5 +65,10 @@ export const API_ENDPOINTS = {
     SET_PASSWORD: `${API_BASE_URL}/api/vip/set-password`,
     LOGIN: `${API_BASE_URL}/api/vip/login`,
   },
+  GALLERY: {
+    LIST: `${API_BASE_URL}/api/gallery`,
+    UPLOAD: `${API_BASE_URL}/api/gallery`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/gallery/${id}`,
+  },
 };
 

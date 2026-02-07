@@ -23,6 +23,13 @@ interface VIPReferral {
   createdAt: string;
 }
 
+interface GalleryItem {
+  _id: string;
+  imageUrl: string;
+  description?: string;
+  createdAt: string;
+}
+
 export default function VIPManagement() {
   const [activeTab, setActiveTab] = useState<'vip' | 'vvip'>('vip');
   const [vips, setVips] = useState<VIP[]>([]);
@@ -33,6 +40,12 @@ export default function VIPManagement() {
   const [referralStats, setReferralStats] = useState<{ total: number; vipCount: number; vvipCount: number } | null>(null);
   const [showReferralsModal, setShowReferralsModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Gallery State
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [newDescription, setNewDescription] = useState('');
 
   const token = localStorage.getItem('token');
 
@@ -69,6 +82,18 @@ export default function VIPManagement() {
       setLoading(false);
     }
   };
+
+  const fetchGallery = async () => {
+      try {
+          const res = await fetch(API_ENDPOINTS.GALLERY.LIST);
+          const data = await res.json();
+          if(data.success) setGalleryItems(data.data);
+      } catch(e) { console.error(e); }
+  };
+
+  useEffect(() => {
+      if(showGalleryModal) fetchGallery();
+  }, [showGalleryModal]);
 
   const generateReferralCode = async (vipId: string) => {
     try {
@@ -107,6 +132,57 @@ export default function VIPManagement() {
     }
   };
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files?.length) return;
+      
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('description', newDescription);
+
+      setUploading(true);
+      try {
+          const res = await fetch(API_ENDPOINTS.GALLERY.UPLOAD, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` }, // Content-Type auto-set
+              body: formData
+          });
+          const data = await res.json();
+          if (data.success) {
+               setGalleryItems([data.data, ...galleryItems]);
+               setNewDescription('');
+               setMessage({ type: 'success', text: 'Image uploaded successfully' });
+          } else {
+               setMessage({ type: 'error', text: data.message });
+          }
+      } catch (err) {
+          console.error(err);
+          setMessage({ type: 'error', text: 'Upload failed' });
+      } finally {
+          setUploading(false);
+          // Clear input
+          e.target.value = '';
+      }
+  };
+
+  const handleDeleteImage = async (id: string) => {
+      if (!confirm('Are you sure you want to delete this image?')) return;
+
+      try {
+          const res = await fetch(API_ENDPOINTS.GALLERY.DELETE(id), {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success) {
+               setGalleryItems(galleryItems.filter(i => i._id !== id));
+               setMessage({ type: 'success', text: 'Image deleted' });
+          }
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
   useEffect(() => {
     if (activeTab === 'vip') {
       fetchVIPs();
@@ -135,12 +211,21 @@ export default function VIPManagement() {
             </h1>
             <p className="text-slate-400 text-sm mt-1">Manage VIPs and VVIPs, generate referral codes</p>
           </div>
-          <Link
-            to="/admin/lottery"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
-          >
-            ← Back to Dashboard
-          </Link>
+          <div className="flex gap-3">
+             <button
+                onClick={() => setShowGalleryModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+             >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Winner Gallery
+             </button>
+             <Link
+                to="/admin/lottery"
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+              >
+                ← Back
+             </Link>
+          </div>
         </div>
 
         {/* Message Toast */}
@@ -191,6 +276,7 @@ export default function VIPManagement() {
               <p className="text-slate-400">No {activeTab.toUpperCase()} members yet</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10 bg-white/5">
@@ -243,7 +329,6 @@ export default function VIPManagement() {
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(vip.couponCode);
-                            // Optional: Add simple toast or feedback here if desired
                           }}
                           className="text-slate-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all"
                           title="Copy Code"
@@ -272,22 +357,26 @@ export default function VIPManagement() {
                       </button>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => generateReferralCode(vip._id)}
-                        disabled={!!vip.referralCode}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
-                          vip.referralCode
-                            ? 'bg-white/5 text-slate-500 cursor-not-allowed'
-                            : 'bg-yellow-500 text-black hover:bg-yellow-400'
-                        }`}
-                      >
-                        {vip.referralCode ? 'Code Generated' : 'Generate Code'}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                            onClick={() => generateReferralCode(vip._id)}
+                            disabled={!!vip.referralCode}
+                            title={vip.referralCode ? 'Code Generated' : 'Generate Referral Code'}
+                            className={`p-2 rounded-lg transition-all ${
+                            vip.referralCode
+                                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
+                            }`}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -302,15 +391,15 @@ export default function VIPManagement() {
                   </h2>
                   {referralStats && (
                     <div className="flex gap-4 mt-2">
-                      <span className="text-sm text-slate-400">
-                        Total: <strong className="text-white">{referralStats.total}</strong>
-                      </span>
-                      <span className="text-sm text-yellow-400">
-                        VIPs: <strong>{referralStats.vipCount}</strong>
-                      </span>
-                      <span className="text-sm text-purple-400">
-                        VVIPs: <strong>{referralStats.vvipCount}</strong>
-                      </span>
+                        <span className="text-sm text-slate-400">
+                            Total: <strong className="text-white">{referralStats.total}</strong>
+                        </span>
+                        <span className="text-sm text-yellow-400">
+                            VIPs: <strong>{referralStats.vipCount}</strong>
+                        </span>
+                        <span className="text-sm text-purple-400">
+                            VVIPs: <strong>{referralStats.vvipCount}</strong>
+                        </span>
                     </div>
                   )}
                 </div>
@@ -353,6 +442,84 @@ export default function VIPManagement() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Global Gallery Modal */}
+        {showGalleryModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-[#0f172a] border border-white/10 rounded-3xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+               {/* Header */}
+               <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                  <div>
+                      <h2 className="text-xl md:text-2xl font-black text-white">
+                        Winner's <span className="text-blue-500">Hall of Fame</span>
+                      </h2>
+                      <p className="text-slate-400 text-xs mt-1">Manage global photos visible to all VIPs</p>
+                  </div>
+                  <button onClick={() => setShowGalleryModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                      <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+               </div>
+
+               {/* Content */}
+               <div className="flex-1 overflow-y-auto p-6">
+                   {/* Upload Area */}
+                   <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
+                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">Add New Winner</h3>
+                       <div className="flex flex-col md:flex-row gap-4">
+                           <input 
+                                type="text" 
+                                placeholder="Description (e.g. Winner of January 2026 Contest)" 
+                                value={newDescription}
+                                onChange={(e) => setNewDescription(e.target.value)}
+                                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                           />
+                           <label className={`flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer transition-all ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                               <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                               {uploading ? (
+                                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                               ) : (
+                                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                               )}
+                               <span className="font-bold text-white text-sm">Upload Photo</span>
+                           </label>
+                       </div>
+                   </div>
+
+                   {/* Grid */}
+                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">Gallery ({galleryItems.length})</h3>
+                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                       {galleryItems.length === 0 ? (
+                           <div className="col-span-full py-12 text-center">
+                               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                                   <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                               </div>
+                               <p className="text-slate-500 text-sm">No photos in gallery yet.</p>
+                           </div>
+                       ) : (
+                           galleryItems.map((item) => (
+                               <div key={item._id} className="group relative break-inside-avoid">
+                                   <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-black/40 border border-white/5">
+                                       <img src={item.imageUrl} alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                                           <div className="flex items-center justify-between">
+                                                <button onClick={() => window.open(item.imageUrl, '_blank')} className="text-white hover:text-blue-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md bg-white/10 px-2 py-1 rounded">View</button>
+                                                <button onClick={() => handleDeleteImage(item._id)} className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-500 rounded-full transition-colors" title="Delete">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
+                                           </div>
+                                       </div>
+                                   </div>
+                                   <div className="mt-2 text-xs text-slate-400 line-clamp-2 px-1">
+                                       {item.description || 'No description'}
+                                   </div>
+                               </div>
+                           ))
+                       )}
+                   </div>
+               </div>
             </div>
           </div>
         )}

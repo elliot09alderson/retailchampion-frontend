@@ -15,6 +15,17 @@ export default function ContestCreation() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Prize Configuration
+  const [useCustomPrizes, setUseCustomPrizes] = useState(false);
+  const [prizes, setPrizes] = useState<number[]>([0, 0, 0, 0, 0]);
+
+  const handlePrizeChange = (index: number, value: string) => {
+    const newPrizes = [...prizes];
+    newPrizes[index] = Number(value) || 0;
+    setPrizes(newPrizes);
+  };
+
+
   const [participantCount, setParticipantCount] = useState<number | null>(null);
 
   // Modal States
@@ -97,6 +108,7 @@ export default function ContestCreation() {
           type: activeTab,
           startDate: activeTab === 'scheduled' ? startDate : undefined,
           endDate: activeTab === 'scheduled' ? endDate : undefined,
+          prizes: useCustomPrizes ? prizes : [],
         }),
       });
       
@@ -185,6 +197,43 @@ export default function ContestCreation() {
                    </div>
               )}
 
+              {/* Prize Distribution (Both Manual and Scheduled) */}
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center justify-between mb-4">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Prize Distribution</label>
+                    <button 
+                      onClick={() => setUseCustomPrizes(!useCustomPrizes)}
+                      className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all ${
+                          useCustomPrizes ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}
+                    >
+                        {useCustomPrizes ? 'Custom Prizes Active' : 'Default Prizes'}
+                    </button>
+                </div>
+                
+                {useCustomPrizes && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-black/20 rounded-xl border border-white/5">
+                        {prizes.map((prize, idx) => (
+                            <div key={idx} className={`${idx >= 3 ? 'col-span-1' : ''}`}>
+                                <label className="text-[9px] font-bold uppercase text-slate-400 mb-1 block">
+                                    Winner #{idx + 1} Prize
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                                    <input 
+                                        type="number" 
+                                        value={prize || ''}
+                                        onChange={(e) => handlePrizeChange(idx, e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-7 pr-3 py-2 font-bold text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+              </div>
+
               {/* Info Text */}
               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl">
                   <div className="flex gap-3">
@@ -195,7 +244,7 @@ export default function ContestCreation() {
                           <h4 className="font-bold text-white text-sm mb-1">{activeTab === 'manual' ? 'Manual Mode' : 'Scheduled Mode'}</h4>
                           <p className="text-xs text-slate-400 leading-relaxed mb-2">
                             {activeTab === 'manual' 
-                                ? "In manual mode, you control the spin. Only 1 winner will be selected. Useful for live events."
+                                ? "In manual mode, you control the spin. Up to 5 winners will be selected manually."
                                 : "In scheduled mode, the system will automatically spin after the end time. 5 winners will be selected."
                             }
                           </p>
