@@ -6,6 +6,7 @@ interface Package {
   _id: string;
   name: string;
   amount: number;
+  isVip?: boolean;
 }
 
 interface PinStats {
@@ -205,33 +206,44 @@ export default function PinManagement() {
           {packages.map((pkg) => {
             const pkgStats = stats[pkg.amount] || { total: 0, active: 0, used: 0, expired: 0 };
             return (
-              <div key={pkg._id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-blue-500/20 transition-all pointer-events-none" />
+              <div key={pkg._id} className={`bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group relative overflow-hidden ${pkg.isVip ? 'ring-1 ring-amber-500/30' : ''}`}>
+                <div className={`absolute top-0 right-0 w-32 h-32 blur-[50px] -mr-16 -mt-16 rounded-full transition-all pointer-events-none ${pkg.isVip ? 'bg-amber-500/20 group-hover:bg-amber-500/30' : 'bg-blue-500/10 group-hover:bg-blue-500/20'}`} />
                 
                 <div className="flex justify-between items-start mb-6 relative">
                   <div>
-                    <h3 className="text-lg font-bold text-white">{pkg.name}</h3>
-                    <p className="text-2xl font-black text-blue-400 mt-1 font-mono">₹{pkg.amount}</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-white">{pkg.name}</h3>
+                      {pkg.isVip && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                          VIP
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-2xl font-black mt-1 font-mono ${pkg.isVip ? 'text-amber-400' : 'text-blue-400'}`}>₹{pkg.amount}</p>
                   </div>
-                  <div className="p-3 bg-white/5 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
+                  <div className={`p-3 bg-white/5 rounded-xl group-hover:scale-110 transition-transform ${pkg.isVip ? 'text-amber-400' : 'text-blue-400'}`}>
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                     </svg>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <span className="block text-xl font-bold text-white">{pkgStats.active}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">Active</span>
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                  <div className="bg-black/20 rounded-lg p-2 text-center">
+                    <span className="block text-lg font-bold text-emerald-400">{pkgStats.active}</span>
+                    <span className="text-[9px] uppercase font-bold text-slate-500">Active</span>
                   </div>
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <span className="block text-xl font-bold text-white">{pkgStats.used}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">Used</span>
+                  <div className="bg-black/20 rounded-lg p-2 text-center">
+                    <span className="block text-lg font-bold text-blue-400">{pkgStats.used}</span>
+                    <span className="text-[9px] uppercase font-bold text-slate-500">Used</span>
                   </div>
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <span className="block text-xl font-bold text-white">{pkgStats.total}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">Total</span>
+                  <div className="bg-black/20 rounded-lg p-2 text-center">
+                    <span className="block text-lg font-bold text-rose-400">{pkgStats.expired}</span>
+                    <span className="text-[9px] uppercase font-bold text-slate-500">Expired</span>
+                  </div>
+                  <div className="bg-black/20 rounded-lg p-2 text-center">
+                    <span className="block text-lg font-bold text-white">{pkgStats.total}</span>
+                    <span className="text-[9px] uppercase font-bold text-slate-500">Total</span>
                   </div>
                 </div>
 

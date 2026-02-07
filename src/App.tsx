@@ -11,6 +11,7 @@ import VIPManagement from './pages/VIPManagement';
 import VIPLogin from './pages/VIPLogin';
 import VIPProfile from './pages/VIPProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import VIPRegistration from './pages/VIPRegistration';
 
 function App() {
   return (
@@ -49,6 +50,8 @@ function App() {
         {/* VIP Routes */}
         <Route path="/vip/login" element={<VIPLogin />} />
         <Route path="/vip/profile" element={<VIPProfile />} />
+        <Route path="/vip/attendance" element={<VIPRegistration />} />
+        <Route path="/vip/register" element={<VIPRegistration />} />
       </Routes>
     </BrowserRouter>
   );

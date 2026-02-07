@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { API_ENDPOINTS } from '../config/api';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function ContestCreation() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'manual' | 'scheduled'>('manual');
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState<any[]>([]);
@@ -117,11 +119,18 @@ export default function ContestCreation() {
       if (data.success) {
         setCreatedContestName(eventName);
         setShowConfirmModal(false);
-        setShowSuccessModal(true);
+        
         // Reset form
         setEventName('');
         setStartDate('');
         setEndDate('');
+
+        if (activeTab === 'manual') {
+            toast.success('Contest created! Redirecting to Spinner...');
+            navigate('/admin/spinner');
+        } else {
+            setShowSuccessModal(true);
+        }
       } else {
         toast.error(data.message || 'Failed to create contest');
         setShowConfirmModal(false);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import PackagesManagement from '../components/PackagesManagement';
 
 interface VIP {
   _id: string;
@@ -31,7 +32,11 @@ interface GalleryItem {
 }
 
 export default function VIPManagement() {
-  const [activeTab, setActiveTab] = useState<'vip' | 'vvip'>('vip');
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = (searchParams.get('tab') as 'vip' | 'vvip' | 'packages') || 'vip';
+
+  const [activeTab, setActiveTab] = useState<'vip' | 'vvip' | 'packages'>(initialTab);
   const [vips, setVips] = useState<VIP[]>([]);
   const [vvips, setVvips] = useState<VIP[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,6 +51,7 @@ export default function VIPManagement() {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [newDescription, setNewDescription] = useState('');
+  const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
 
   const token = localStorage.getItem('token');
 
@@ -132,6 +138,35 @@ export default function VIPManagement() {
     }
   };
 
+  const handleUpdateGalleryItem = async () => {
+    if (!editingItem) return;
+    try {
+        setUploading(true);
+        const res = await fetch(API_ENDPOINTS.GALLERY.UPDATE(editingItem._id), {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({ description: newDescription })
+        });
+        const data = await res.json();
+        if (data.success) {
+            setGalleryItems(galleryItems.map(i => i._id === editingItem._id ? data.data : i));
+            setNewDescription('');
+            setEditingItem(null);
+            setMessage({ type: 'success', text: 'Item updated successfully' });
+        } else {
+            setMessage({ type: 'error', text: data.message });
+        }
+    } catch (e) {
+        console.error(e);
+        setMessage({ type: 'error', text: 'Update failed' });
+    } finally {
+        setUploading(false);
+    }
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files?.length) return;
       
@@ -186,7 +221,7 @@ export default function VIPManagement() {
   useEffect(() => {
     if (activeTab === 'vip') {
       fetchVIPs();
-    } else {
+    } else if (activeTab === 'vvip') {
       fetchVVIPs();
     }
   }, [activeTab]);
@@ -200,6 +235,50 @@ export default function VIPManagement() {
 
   const currentList = activeTab === 'vip' ? vips : vvips;
 
+  const handleDeleteVIP = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete VIP member "${name}"? This action cannot be undone.`)) return;
+
+    try {
+        const res = await fetch(API_ENDPOINTS.VIP.DELETE(id), {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            setMessage({ type: 'success', text: 'VIP member deleted successfully' });
+            if (activeTab === 'vip') setVips(vips.filter(v => v._id !== id));
+            else setVvips(vvips.filter(v => v._id !== id));
+        } else {
+            setMessage({ type: 'error', text: data.message });
+        }
+    } catch (err) {
+        setMessage({ type: 'error', text: 'Failed to delete VIP member' });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!confirm('WARNING: Are you sure you want to delete ALL VIP and VVIP members? This action is irreversible!')) return;
+    
+    if (!confirm('Please confirm again. This will wipe the entire VIP database. Are you absolutely sure?')) return;
+
+    try {
+        const res = await fetch(API_ENDPOINTS.VIP.DELETE_ALL, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            setMessage({ type: 'success', text: 'All VIP members deleted successfully' });
+            setVips([]);
+            setVvips([]);
+        } else {
+            setMessage({ type: 'error', text: data.message });
+        }
+    } catch (err) {
+        setMessage({ type: 'error', text: 'Failed to delete all members' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -212,6 +291,13 @@ export default function VIPManagement() {
             <p className="text-slate-400 text-sm mt-1">Manage VIPs and VVIPs, generate referral codes</p>
           </div>
           <div className="flex gap-3">
+             <button
+                onClick={handleDeleteAll}
+                className="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg text-sm font-bold border border-red-600/20 transition-all flex items-center gap-2"
+             >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Delete All
+             </button>
              <button
                 onClick={() => setShowGalleryModal(true)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
@@ -261,124 +347,151 @@ export default function VIPManagement() {
           >
             VVIP Members ({vvips.length})
           </button>
+          <button
+            onClick={() => setActiveTab('packages')}
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'packages'
+                ? 'bg-amber-500 text-black'
+                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+          >
+            VIP Packages
+          </button>
         </div>
 
-        {/* VIP/VVIP List */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full mx-auto" />
-              <p className="text-slate-400 mt-4">Loading...</p>
-            </div>
-          ) : currentList.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-6xl mb-4">{activeTab === 'vip' ? '👑' : '💎'}</div>
-              <p className="text-slate-400">No {activeTab.toUpperCase()} members yet</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/5">
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Member
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Package
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Login Code
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Referral Code
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Referrals
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentList.map((vip) => (
-                  <tr key={vip._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={vip.selfieUrl || '/placeholder.png'}
-                          alt={vip.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50"
-                        />
-                        <div>
-                          <p className="font-semibold text-white">{vip.name}</p>
-                          <p className="text-xs text-slate-400">{vip.phoneNumber}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold">
-                        ₹{vip.package}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 group">
-                        <code className="px-2 py-1 bg-white/10 rounded text-sm font-mono text-emerald-400">
-                          {vip.couponCode}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(vip.couponCode);
-                          }}
-                          className="text-slate-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all"
-                          title="Copy Code"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {vip.referralCode ? (
-                        <code className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-sm font-mono">
-                          {vip.referralCode}
-                        </code>
-                      ) : (
-                        <span className="text-slate-500 text-sm">Not generated</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => viewReferrals(vip)}
-                        className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-sm font-medium transition-colors"
-                      >
-                        {vip.referralCount} referrals
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button
-                            onClick={() => generateReferralCode(vip._id)}
-                            disabled={!!vip.referralCode}
-                            title={vip.referralCode ? 'Code Generated' : 'Generate Referral Code'}
-                            className={`p-2 rounded-lg transition-all ${
-                            vip.referralCode
-                                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
-                                : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
-                            }`}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </div>
+        {/* Content Area */}
+        {activeTab === 'packages' ? (
+             <PackagesManagement mode="vip" />
+        ) : (
+             <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                {loading ? (
+                    <div className="p-12 text-center">
+                    <div className="animate-spin w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full mx-auto" />
+                    <p className="text-slate-400 mt-4">Loading...</p>
+                    </div>
+                ) : currentList.length === 0 ? (
+                    <div className="p-12 text-center">
+                    <div className="text-6xl mb-4">{activeTab === 'vip' ? '👑' : '💎'}</div>
+                    <p className="text-slate-400">No {activeTab.toUpperCase()} members yet</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                    <table className="w-full">
+                    <thead>
+                        <tr className="border-b border-white/10 bg-white/5">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Member
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            WhatsApp
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Package
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Login Code
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Referral Code
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Referrals
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Actions
+                        </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {currentList.map((vip) => (
+                        <tr key={vip._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <img
+                                src={vip.selfieUrl || '/placeholder.png'}
+                                alt={vip.name}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50"
+                                />
+                                <p className="font-semibold text-white">{vip.name}</p>
+                            </div>
+                            </td>
+                            <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.474.875 3.183 1.357 4.935 1.358 4.833.002 8.767-3.931 8.77-8.766 0-2.343-.911-4.544-2.566-6.199s-3.855-2.566-6.198-2.567c-4.835 0-8.771 3.935-8.774 8.77-.001 1.573.411 3.103 1.196 4.453l1.01 1.742-1.071 3.91 4.008-1.051zm10.946-6.166c-.103-.173-.38-.277-.796-.485s-2.459-1.213-2.839-1.353-.657-.208-.933.208-.103.208-.069.277.103.173.208.277c.103.104.208.242.311.346.103.104.242.242.103.485s-.208.242-.484.242-.276.104-1.972-.519c-1.319-1.177-2.208-2.632-2.467-3.048s-.027-.64.18-.847c.187-.186.415-.484.622-.726.208-.242.276-.415.415-.691s.069-.519-.034-.726-.933-2.248-1.279-3.078c-.337-.813-.68-.703-.933-.716s-.519-.013-.795-.013-.726.104-1.107.519-1.453 1.419-1.453 3.46 1.487 4.012 1.694 4.288c.208.277 2.925 4.46 7.087 6.256 1.13.487 1.83.649 2.505.862.991.315 1.898.27 2.613.163.796-.118 2.316-1.141 2.645-2.248s.329-2.041.208-2.248z" /></svg>
+                                <span className="text-sm text-slate-400 font-mono tracking-wide">{vip.phoneNumber}</span>
+                            </div>
+                            </td>
+                            <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold">
+                                ₹{vip.package}
+                            </span>
+                            </td>
+                            <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 group">
+                                <code className="px-2 py-1 bg-white/10 rounded text-sm font-mono text-emerald-400">
+                                {vip.couponCode}
+                                </code>
+                                <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(vip.couponCode);
+                                }}
+                                className="text-slate-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all"
+                                title="Copy Code"
+                                >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                </button>
+                            </div>
+                            </td>
+                            <td className="px-6 py-4">
+                            {vip.referralCode ? (
+                                <code className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-sm font-mono">
+                                {vip.referralCode}
+                                </code>
+                            ) : (
+                                <span className="text-slate-500 text-sm">Not generated</span>
+                            )}
+                            </td>
+                            <td className="px-6 py-4">
+                            <button
+                                onClick={() => viewReferrals(vip)}
+                                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-sm font-medium transition-colors"
+                            >
+                                {vip.referralCount} referrals
+                            </button>
+                            </td>
+                            <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => generateReferralCode(vip._id)}
+                                    disabled={!!vip.referralCode}
+                                    title={vip.referralCode ? 'Code Generated' : 'Generate Referral Code'}
+                                    className={`p-2 rounded-lg transition-all ${
+                                    vip.referralCode
+                                        ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                                        : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
+                                    }`}
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteVIP(vip._id, vip.name)}
+                                    className="p-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all border border-red-600/20"
+                                    title="Delete Member"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                            </td>
+                        </tr>
+                        ))}
+                    </tbody>
+                    </table>
+                    </div>
+                )}
+             </div>
+        )}
 
         {/* Referrals Modal */}
         {showReferralsModal && selectedVIP && (
@@ -458,16 +571,18 @@ export default function VIPManagement() {
                       </h2>
                       <p className="text-slate-400 text-xs mt-1">Manage global photos visible to all VIPs</p>
                   </div>
-                  <button onClick={() => setShowGalleryModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                  <button onClick={() => { setShowGalleryModal(false); setEditingItem(null); setNewDescription(''); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                       <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                </div>
 
                {/* Content */}
                <div className="flex-1 overflow-y-auto p-6">
-                   {/* Upload Area */}
+                   {/* Upload/Edit Area */}
                    <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
-                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">Add New Winner</h3>
+                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">
+                           {editingItem ? 'Edit Winner Details' : 'Add New Winner'}
+                       </h3>
                        <div className="flex flex-col md:flex-row gap-4">
                            <input 
                                 type="text" 
@@ -476,15 +591,33 @@ export default function VIPManagement() {
                                 onChange={(e) => setNewDescription(e.target.value)}
                                 className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
                            />
-                           <label className={`flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer transition-all ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                               <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
-                               {uploading ? (
-                                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                               ) : (
-                                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                               )}
-                               <span className="font-bold text-white text-sm">Upload Photo</span>
-                           </label>
+                           {editingItem ? (
+                               <div className="flex gap-2">
+                                   <button 
+                                     onClick={handleUpdateGalleryItem}
+                                     disabled={uploading}
+                                     className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50"
+                                   >
+                                       {uploading ? 'Updating...' : 'Update'}
+                                   </button>
+                                   <button 
+                                     onClick={() => { setEditingItem(null); setNewDescription(''); }}
+                                     className="px-4 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl font-bold transition-all"
+                                   >
+                                       Cancel
+                                   </button>
+                               </div>
+                           ) : (
+                               <label className={`flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer transition-all ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                   <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                                   {uploading ? (
+                                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                   ) : (
+                                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                   )}
+                                   <span className="font-bold text-white text-sm">Upload Photo</span>
+                               </label>
+                           )}
                        </div>
                    </div>
 
@@ -501,12 +634,21 @@ export default function VIPManagement() {
                        ) : (
                            galleryItems.map((item) => (
                                <div key={item._id} className="group relative break-inside-avoid">
-                                   <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-black/40 border border-white/5">
+                                   <div className={`relative aspect-[4/5] rounded-xl overflow-hidden bg-black/40 border border-white/5 ${editingItem?._id === item._id ? 'ring-2 ring-blue-500' : ''}`}>
                                        <img src={item.imageUrl} alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                                           <div className="flex items-center justify-between">
-                                                <button onClick={() => window.open(item.imageUrl, '_blank')} className="text-white hover:text-blue-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md bg-white/10 px-2 py-1 rounded">View</button>
-                                                <button onClick={() => handleDeleteImage(item._id)} className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-500 rounded-full transition-colors" title="Delete">
+                                           <div className="flex items-center justify-between gap-2">
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingItem(item);
+                                                        setNewDescription(item.description || '');
+                                                    }} 
+                                                    className="flex-1 p-2 bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-colors text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1"
+                                                >
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    Edit
+                                                </button>
+                                                <button onClick={() => handleDeleteImage(item._id)} className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-500 rounded-lg transition-colors" title="Delete">
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 </button>
                                            </div>

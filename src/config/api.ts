@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
     SEED_PARTICIPANTS: `${API_BASE_URL}/api/lottery/seed/participants`,
     HISTORY: `${API_BASE_URL}/api/lottery/history`,
     SELECTABLE: `${API_BASE_URL}/api/lottery/selectable`,
+    PUBLIC_WINNERS: `${API_BASE_URL}/api/lottery/public/winners`,
     DELETE: (id: string) => `${API_BASE_URL}/api/lottery/${id}`,
     DELETE_ALL: `${API_BASE_URL}/api/lottery/history/all`,
   },
@@ -64,10 +65,14 @@ export const API_ENDPOINTS = {
     VERIFY_COUPON: `${API_BASE_URL}/api/vip/verify-coupon`,
     SET_PASSWORD: `${API_BASE_URL}/api/vip/set-password`,
     LOGIN: `${API_BASE_URL}/api/vip/login`,
+    ATTENDANCE: `${API_BASE_URL}/api/vip/attendance`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/vip/${id}`,
+    DELETE_ALL: `${API_BASE_URL}/api/vip/delete-all`,
   },
   GALLERY: {
     LIST: `${API_BASE_URL}/api/gallery`,
     UPLOAD: `${API_BASE_URL}/api/gallery`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/gallery/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/gallery/${id}`,
   },
 };

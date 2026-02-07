@@ -36,18 +36,45 @@ interface GalleryItem {
   createdAt: string;
 }
 
+interface LotteryWinner {
+  _id: string;
+  eventName: string;
+  completedAt: string;
+  winners: {
+    _id: string;
+    name: string;
+    selfieUrl?: string;
+  }[];
+  prizes: number[];
+}
+
 export default function VIPProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<VIPUser | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [lotteryHistory, setLotteryHistory] = useState<LotteryWinner[]>([]);
   const [stats, setStats] = useState<ReferralStats>({ total: 0, vipCount: 0, vvipCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProfile();
     fetchGallery();
+    fetchWinners();
   }, []);
+
+  const fetchWinners = async () => {
+    try {
+        const token = localStorage.getItem('vip_token');
+        if (!token) return;
+        
+        const res = await fetch(API_ENDPOINTS.LOTTERY.PUBLIC_WINNERS, {
+             headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if(data.success) setLotteryHistory(data.data);
+    } catch(e) { console.error(e); }
+  };
 
   const fetchGallery = async () => {
     try {
@@ -236,6 +263,69 @@ export default function VIPProfile() {
                           )}
                       </div>
                   ))}
+               </div>
+           </div>
+        )}
+
+        {/* Latest Champions Section */}
+        {lotteryHistory.length > 0 && (
+           <div className="mb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-300">
+               <div className="flex items-center gap-3 mb-6">
+                   <div className="p-2 bg-gradient-to-tr from-emerald-400 to-green-500 rounded-lg shadow-lg shadow-emerald-500/20">
+                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                   </div>
+                   <div>
+                       <h2 className="text-xl font-black text-white">Latest Champions</h2>
+                       <p className="text-slate-400 text-xs mt-0.5">Recent winners and their prizes</p>
+                   </div>
+               </div>
+
+               <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
+                   <div className="overflow-x-auto">
+                       <table className="w-full">
+                           <thead className="bg-white/5 border-b border-white/5">
+                               <tr>
+                                   <th className="p-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Winner</th>
+                                   <th className="p-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Prize</th>
+                                   <th className="p-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Contest</th>
+                                   <th className="p-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Date</th>
+                               </tr>
+                           </thead>
+                           <tbody className="divide-y divide-white/5">
+                               {lotteryHistory.flatMap(lottery => 
+                                   lottery.winners.map((winner, idx) => ({
+                                       ...winner,
+                                       prize: lottery.prizes[idx] || 0,
+                                       contestName: lottery.eventName,
+                                       date: lottery.completedAt,
+                                       lotteryId: lottery._id
+                                   }))
+                               ).slice(0, 10).map((item, i) => ( 
+                                   <tr key={`${item.lotteryId}-${item._id}-${i}`} className="hover:bg-white/5 transition-colors">
+                                       <td className="p-4">
+                                           <div className="flex items-center gap-3">
+                                               <img 
+                                                   src={item.selfieUrl || "https://ui-avatars.com/api/?name=" + item.name} 
+                                                   alt={item.name}
+                                                   className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30"
+                                               />
+                                               <span className="font-bold text-white text-sm">{item.name}</span>
+                                           </div>
+                                       </td>
+                                       <td className="p-4">
+                                           <span className="text-emerald-400 font-black text-sm">₹{item.prize.toLocaleString()}</span>
+                                       </td>
+                                       <td className="p-4">
+                                           <span className="text-slate-300 text-xs font-bold bg-white/5 px-2 py-1 rounded-lg">{item.contestName}</span>
+                                       </td>
+                                       <td className="p-4 text-right text-slate-500 text-xs font-medium">
+                                           {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                       </td>
+                                   </tr>
+                               ))}
+                           </tbody>
+                       </table>
+                   </div>
                </div>
            </div>
         )}

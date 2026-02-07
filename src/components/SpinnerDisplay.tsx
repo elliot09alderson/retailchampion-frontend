@@ -151,7 +151,7 @@ export default function SpinnerDisplay({
       </div>
 
       {/* Spinning Wheel - MIDDLE */}
-      <div className="relative w-[75vw] h-[75vw] max-w-[280px] max-h-[280px] md:max-w-none md:w-96 md:h-96 mb-6 group">
+      <div className="relative w-[75vw] aspect-square max-w-[280px] md:w-96 md:max-w-none mb-6 group shrink-0 mx-auto">
         {/* Outer neon radiation */}
         <div className="absolute inset-0 bg-blue-600/20 rounded-full blur-[80px] animate-pulse" />
         <div className="absolute inset-0 bg-rose-600/10 rounded-full blur-[60px] animate-pulse delay-700" />
