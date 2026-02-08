@@ -11,9 +11,7 @@ const registrationSchema = Yup.object().shape({
   phoneNumber: Yup.string()
     .matches(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit phone number')
     .required('Phone number is required'),
-  aadhaarNumber: Yup.string()
-    .matches(/^\d{12}$/, 'Aadhaar number must be exactly 12 digits')
-    .required('Aadhaar number is required'),
+
   package: Yup.number()
     .required('Package selection is required'),
   pin: Yup.string()
@@ -65,7 +63,6 @@ export default function VIPRegistrationForm() {
       const formData = new FormData();
       formData.append('name', values.name);
       formData.append('phoneNumber', values.phoneNumber);
-      formData.append('aadhaarNumber', values.aadhaarNumber);
       formData.append('package', values.package);
       formData.append('pin', values.pin);
       formData.append('isVipRegistration', 'true');
@@ -177,7 +174,7 @@ export default function VIPRegistrationForm() {
                 initialValues={{ 
                   name: '', 
                   phoneNumber: '', 
-                  aadhaarNumber: '', 
+ 
                   package: '', 
                   pin: '', 
                   leaderCode: '', 
@@ -259,11 +256,7 @@ export default function VIPRegistrationForm() {
                             <ErrorMessage name="phoneNumber" component="div" className="text-red-500 text-xs mt-1 font-medium" />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Aadhaar Number <span className="text-red-500">*</span></label>
-                            <Field name="aadhaarNumber" type="text" maxLength={12} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all font-bold text-slate-700 placeholder-slate-400" placeholder="12-digit Aadhaar" />
-                            <ErrorMessage name="aadhaarNumber" component="div" className="text-red-500 text-xs mt-1 font-medium" />
-                        </div>
+
 
                         <div className="grid grid-cols-1 gap-4">
                             <div>

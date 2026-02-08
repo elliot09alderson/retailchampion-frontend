@@ -125,7 +125,7 @@ export default function AdminLottery() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white font-sans selection:bg-blue-500/30">
+    <div className="h-screen bg-[#0f172a] text-white font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-white/5 bg-[#0f172a]/90 backdrop-blur-xl sticky top-0 z-50">
            <div className="flex items-center gap-3">
@@ -137,9 +137,9 @@ export default function AdminLottery() {
            </button>
         </div>
 
-        <div className="flex relative">
+        <div className="flex relative flex-1 overflow-hidden">
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0f172a] border-r border-white/5 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0f172a] border-r border-white/5 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-full ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-full flex flex-col">
                     <div className="p-6 hidden lg:block">
                         <h1 className="text-2xl font-black tracking-tighter">Retail<span className="text-blue-500">Champions</span></h1>
@@ -202,12 +202,14 @@ export default function AdminLottery() {
             <main className="flex-1 w-full min-w-0 overflow-hidden">
                 <div className="h-full overflow-y-auto custom-scrollbar p-4 lg:p-8 space-y-8">
                      {/* Dynamic Header */}
+                     {(activeView === 'info' || activeView === 'create_contest') && (
                      <header className="mb-8 hidden lg:block">
                         <h2 className="text-3xl font-black text-white tracking-tight">
                             {menuItems.find(i => i.id === activeView)?.label}
                         </h2>
                         <p className="text-slate-400 mt-1">Manage your application efficiently.</p>
                      </header>
+                     )}
 
                      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {activeView === 'info' && (

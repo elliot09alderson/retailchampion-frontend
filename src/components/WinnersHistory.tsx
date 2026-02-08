@@ -18,6 +18,7 @@ interface Contest {
   totalParticipants?: number;
   startDate?: string;
   endDate?: string;
+  prizes?: number[];
 }
 
 interface WinnerEntry {
@@ -28,6 +29,7 @@ interface WinnerEntry {
   winner: Winner;
   startDate?: string;
   endDate?: string;
+  prize?: number;
 }
 
 type SortField = 'name' | 'eventName' | 'completedAt';
@@ -173,7 +175,7 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
     const entries: WinnerEntry[] = [];
     contests.forEach(contest => {
       if (contest.winners && contest.winners.length > 0) {
-        contest.winners.forEach(winner => {
+        contest.winners.forEach((winner, index) => {
           entries.push({
             _id: contest._id,
             eventName: contest.eventName,
@@ -181,7 +183,8 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
             package: contest.package,
             winner: winner,
             startDate: contest.startDate,
-            endDate: contest.endDate
+            endDate: contest.endDate,
+            prize: contest.prizes ? contest.prizes[index] : undefined
           });
         });
       } else if (contest.winnerId) {
@@ -297,13 +300,14 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
     const dataToExport = filteredData;
     if (dataToExport.length === 0) return;
  
-    const headers = ['S.No', 'Winner Name', 'Phone Number', 'Contest Name', 'Entry Package', 'Victory Date', 'Victory Time'];
+    const headers = ['S.No', 'Winner Name', 'Phone Number', 'Contest Name', 'Entry Fee', 'Prize Won', 'Victory Date', 'Victory Time'];
     const rows = dataToExport.map((entry, index) => [
       index + 1,
       entry.winner.name || 'N/A',
       entry.winner.phoneNumber || 'N/A',
       entry.eventName,
       entry.package ? `₹${entry.package.toLocaleString()}` : 'N/A',
+      entry.prize ? `₹${entry.prize.toLocaleString()}` : (entry.package ? `₹${entry.package.toLocaleString()}` : 'N/A'), // Fallback to package amt if no specific prize? Or just N/A
       new Date(entry.completedAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -475,6 +479,7 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
               <th>Phone Number</th>
               <th>Contest Name</th>
               <th>Fee</th>
+              <th>Prize Won</th>
               <th>Victory Date</th>
               <th>Time</th>
             </tr>
@@ -487,6 +492,7 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
                 <td class="phone">${entry.winner.phoneNumber || 'N/A'}</td>
                 <td class="contest">${entry.eventName}</td>
                 <td class="package">₹${entry.package?.toLocaleString() || 'N/A'}</td>
+                <td class="prize" style="color: #10b981; font-weight: bold;">₹${entry.prize?.toLocaleString() || 'N/A'}</td>
                 <td class="date">${new Date(entry.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                 <td class="date">${new Date(entry.completedAt).toLocaleTimeString()}</td>
               </tr>
@@ -736,6 +742,9 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
                   <th className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest">
                     Schedule
                   </th>
+                  <th className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest">
+                    Prize Won
+                  </th>
                   <th 
                     className="px-6 py-5 text-left text-xs font-black text-slate-300 uppercase tracking-widest cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('completedAt')}
@@ -799,8 +808,16 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-xs italic">Instant Draw</span>
+                        <span className="text-slate-500 text-xs font-bold font-mono">Manual Draw</span>
                       )}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <p className="text-emerald-400 font-black text-sm">
+                           {entry.prize ? `₹${entry.prize.toLocaleString()}` : <span className="text-slate-600">--</span>}
+                        </p>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Winnings</span>
+                      </div>
                     </td>
                     <td className="px-6 py-5">
                       <p className="text-white font-mono text-sm">
@@ -824,7 +841,8 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
                                 completedAt: entry.completedAt,
                                 package: entry.package,
                                 winnerId: entry.winner,
-                                winners: [entry.winner]
+                                winners: [entry.winner],
+                                prize: entry.prize
                              });
                           }}
                           className="px-3 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all"
@@ -1017,6 +1035,23 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-yellow-600/20 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Prize Won</p>
+                    <p className="text-emerald-400 font-black text-lg">
+                      {/* @ts-ignore - prize is added dynamically */}
+                      {selectedContest.prize ? `₹${selectedContest.prize.toLocaleString()}` : 'N/A'}
                     </p>
                   </div>
                 </div>

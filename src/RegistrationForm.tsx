@@ -337,7 +337,7 @@ export default function RegistrationForm() {
                 {/* Package Selection - VIP First */}
                 <div className="space-y-4">
                   <label className="block text-sm font-medium text-[#334155]">
-                    Select Contest Package <span className="text-[#ef4444]">*</span>
+                    Retail Code <span className="text-[#ef4444]">*</span>
                   </label>
                   
                   {loadingPackages ? (
@@ -374,14 +374,7 @@ export default function RegistrationForm() {
                         </div>
                       </div>
 
-                      <div className="text-center">
-                            <p className="text-xs text-[#64748b]">
-                                Access VIP Benefits?{' '}
-                                <a href="/vip/register" className="text-amber-600 hover:text-amber-700 font-bold transition-colors underline-offset-2 hover:underline">
-                                Register as VIP
-                                </a>
-                            </p>
-                      </div>
+
                     </div>
                   )}
                   <ErrorMessage name="package" component="div" className="text-[#ef4444] text-xs font-normal" />
