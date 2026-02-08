@@ -108,8 +108,8 @@ export default function ContestCreation() {
           eventName,
           package: selectedPackage,
           type: activeTab,
-          startDate: activeTab === 'scheduled' ? startDate : undefined,
-          endDate: activeTab === 'scheduled' ? endDate : undefined,
+          startDate: activeTab === 'scheduled' && startDate ? new Date(startDate).toISOString() : undefined,
+          endDate: activeTab === 'scheduled' && endDate ? new Date(endDate).toISOString() : undefined,
           prizes: useCustomPrizes ? prizes : [],
         }),
       });

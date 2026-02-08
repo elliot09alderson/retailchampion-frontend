@@ -125,11 +125,29 @@ export default function ContestHistory({ onNavigateWinners }: ContestHistoryProp
           filteredContests.map((contest) => (
             <div
               key={contest._id}
-              onClick={() => onNavigateWinners?.(contest.eventName, contest.package?.toString())}
-              className="group bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 hover:border-blue-500/30 p-6 rounded-3xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+              onClick={() => {
+                if (contest.status === 'completed') {
+                  onNavigateWinners?.(contest.eventName, contest.package?.toString());
+                } else {
+                  toast('Results available after contest completion', {
+                    icon: '⏳',
+                    style: {
+                      borderRadius: '10px',
+                      background: '#333',
+                      color: '#fff',
+                    },
+                  });
+                }
+              }}
+              className={`group bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 p-6 rounded-3xl transition-all duration-300 relative overflow-hidden ${
+                contest.status === 'completed' ? 'hover:border-blue-500/30 cursor-pointer' : 'cursor-default'
+              }`}
             >
               {/* Decorative side bar */}
-              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600/50 group-hover:bg-blue-500 transition-colors" />
+              <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${
+                contest.status === 'completed' ? 'bg-blue-600/50 group-hover:bg-blue-500' : 
+                contest.status === 'active' ? 'bg-emerald-500/50' : 'bg-amber-500/50'
+              }`} />
               
               <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
                 {/* Contest Info */}
@@ -138,13 +156,22 @@ export default function ContestHistory({ onNavigateWinners }: ContestHistoryProp
                     <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-lg font-black text-[10px] uppercase tracking-widest border border-blue-500/20">
                       ₹{contest.package?.toLocaleString() || '0'} PACK
                     </span>
-                    <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                      {new Date(contest.completedAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </span>
+                    {contest.status === 'completed' && contest.completedAt ? (
+                      <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                        {new Date(contest.completedAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
+                        contest.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      }`}>
+                        {contest.status === 'active' ? 'LIVE NOW' : 'SCHEDULED'}
+                      </span>
+                    )}
                   </div>
                   
                   {/* Date Range */}
@@ -156,7 +183,9 @@ export default function ContestHistory({ onNavigateWinners }: ContestHistoryProp
                           <span className="text-white">{new Date(contest.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                       </div>
                   )}
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">
+                  <h3 className={`text-2xl font-black text-white uppercase tracking-tight transition-colors ${
+                    contest.status === 'completed' ? 'group-hover:text-blue-400' : ''
+                  }`}>
                     {contest.eventName}
                   </h3>
                   <p className="text-slate-400 text-xs mt-1 font-bold">
