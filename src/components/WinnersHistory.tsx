@@ -18,7 +18,9 @@ interface Contest {
   totalParticipants?: number;
   startDate?: string;
   endDate?: string;
+  contestPrizes?: number[];
   prizes?: number[];
+  prize?: number; // Added for UI display after flattening
 }
 
 interface WinnerEntry {
