@@ -82,6 +82,36 @@ export default function ContestHistory({ onNavigateWinners }: ContestHistoryProp
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Delete All Button */}
+          {contests.length > 0 && (
+              <button
+                onClick={async () => {
+                    if (!confirm('WARNING: This will delete ALL completed contest history records. This action cannot be undone!')) return;
+                    if (!confirm('Are you absolutely sure? This will wipe all history data.')) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(API_ENDPOINTS.LOTTERY.DELETE_ALL, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            toast.success('All history deleted successfully');
+                            setContests([]);
+                        } else {
+                            toast.error(data.message || 'Failed to delete history');
+                        }
+                    } catch (err) {
+                        toast.error('Error deleting history');
+                    }
+                }}
+                className="px-4 py-2.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-xl text-sm font-bold border border-red-600/20 transition-all flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Delete All
+              </button>
+          )}
           {/* Package Filter */}
           <select
             value={filterPackage}
@@ -216,6 +246,38 @@ export default function ContestHistory({ onNavigateWinners }: ContestHistoryProp
                   </div>
                 )}
               </div>
+
+                {/* Delete Button */}
+                <button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     const deleteContest = async () => {
+                        if (!confirm(`Are you sure you want to delete "${contest.eventName}"? Data cannot be recovered.`)) return;
+                        
+                        try {
+                           const token = localStorage.getItem('token');
+                           const res = await fetch(API_ENDPOINTS.LOTTERY.DELETE(contest._id), {
+                               method: 'DELETE',
+                               headers: { Authorization: `Bearer ${token}` }
+                           });
+                           const data = await res.json();
+                           if (data.success) {
+                               toast.success('Contest deleted successfully');
+                               setContests(contests.filter(c => c._id !== contest._id));
+                           } else {
+                               toast.error(data.message || 'Failed to delete contest');
+                           }
+                        } catch (err) {
+                           toast.error('Error deleting contest');
+                        }
+                     };
+                     deleteContest();
+                   }}
+                   className="absolute top-6 right-6 p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all border border-red-500/20 z-20 opacity-0 group-hover:opacity-100"
+                   title="Delete Contest"
+                >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
             </div>
           ))
         )}

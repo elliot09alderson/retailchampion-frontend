@@ -75,5 +75,8 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `${API_BASE_URL}/api/gallery/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/gallery/${id}`,
   },
+  LOGS: {
+    LOG: `${API_BASE_URL}/api/logs/log`,
+  },
 };
 

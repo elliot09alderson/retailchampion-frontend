@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 import PackagesManagement from '../components/PackagesManagement';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface VIP {
   _id: string;
@@ -279,6 +281,88 @@ export default function VIPManagement() {
     }
   };
 
+  const exportToCSV = () => {
+    const listToExport = activeTab === 'vip' ? vips : vvips;
+    const type = activeTab.toUpperCase();
+    
+    if (listToExport.length === 0) {
+      setMessage({ type: 'error', text: 'No data to export' });
+      return;
+    }
+
+    // CSV Header
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Name,Phone Number,Package(INR),Login Code,VIP Status,Referral Code,Referral Count,Created At\n";
+
+    // CSV Rows
+    listToExport.forEach(item => {
+      const row = [
+        `"${item.name}"`,
+        `"${item.phoneNumber}"`,
+        item.package,
+        item.couponCode,
+        item.vipStatus,
+        item.referralCode || 'Not Generated',
+        item.referralCount,
+        new Date(item.createdAt).toLocaleDateString()
+      ].join(",");
+      csvContent += row + "\n";
+    });
+
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${type}_List_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const listToExport = activeTab === 'vip' ? vips : vvips;
+    const type = activeTab.toUpperCase();
+
+    if (listToExport.length === 0) {
+      setMessage({ type: 'error', text: 'No data to export' });
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text(`${type} Members List`, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    const tableColumn = ["Name", "Phone", "Package", "Login Code", "Ref. Code", "Ref. Count"];
+    const tableRows: any[] = [];
+
+    listToExport.forEach(item => {
+      const row = [
+        item.name,
+        item.phoneNumber,
+        item.package,
+        item.couponCode,
+        item.referralCode || '-',
+        item.referralCount
+      ];
+      tableRows.push(row);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 35,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [234, 179, 8], textColor: 0 } // Yellow header
+    });
+
+    doc.save(`${type}_List_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -291,6 +375,27 @@ export default function VIPManagement() {
             <p className="text-slate-400 text-sm mt-1">Manage VIPs and VVIPs, generate referral codes</p>
           </div>
           <div className="flex gap-3">
+             {activeTab !== 'packages' && (
+               <>
+                 <button
+                    onClick={exportToCSV}
+                    className="px-3 py-2 bg-emerald-600/10 hover:bg-emerald-600 text-emerald-500 hover:text-white rounded-lg text-sm font-bold border border-emerald-600/20 transition-all flex items-center gap-2"
+                    title="Export to CSV"
+                 >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Export CSV
+                 </button>
+                 <button
+                    onClick={exportToPDF}
+                    className="px-3 py-2 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white rounded-lg text-sm font-bold border border-rose-600/20 transition-all flex items-center gap-2"
+                    title="Export to PDF"
+                 >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    Export PDF
+                 </button>
+               </>
+             )}
+
              <button
                 onClick={handleDeleteAll}
                 className="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg text-sm font-bold border border-red-600/20 transition-all flex items-center gap-2"
@@ -298,6 +403,7 @@ export default function VIPManagement() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 Delete All
              </button>
+
              <button
                 onClick={() => setShowGalleryModal(true)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
@@ -310,7 +416,7 @@ export default function VIPManagement() {
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
               >
                 ← Back
-             </Link>
+              </Link>
           </div>
         </div>
 

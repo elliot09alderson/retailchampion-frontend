@@ -337,7 +337,7 @@ export default function RegistrationForm() {
                 {/* Package Selection - VIP First */}
                 <div className="space-y-4">
                   <label className="block text-sm font-medium text-[#334155]">
-                    Retail Code <span className="text-[#ef4444]">*</span>
+                    Select the contest <span className="text-[#ef4444]">*</span>
                   </label>
                   
                   {loadingPackages ? (
@@ -383,7 +383,7 @@ export default function RegistrationForm() {
                 {/* PIN Field - Always Visible */}
                 <div className="space-y-2">
                   <label htmlFor="pin" className="block text-sm font-medium text-[#334155]">
-                    Package PIN <span className="text-[#ef4444]">*</span>
+                    Retail PIN <span className="text-[#ef4444]">*</span>
                   </label>
                     <Field
                       type="text"
@@ -430,7 +430,7 @@ export default function RegistrationForm() {
                 {/* ID Field */}
                 <div className="space-y-2">
                   <label htmlFor="registrationId" className="block text-sm font-medium text-[#334155]">
-                    ID <span className="text-[#64748b] text-xs font-normal">(Optional, 10-digit number)</span>
+                    ID Number <span className="text-[#64748b] text-xs font-normal">(Optional, 10-digit number)</span>
                   </label>
                   <Field
                     type="text"

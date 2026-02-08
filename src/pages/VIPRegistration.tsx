@@ -260,7 +260,7 @@ export default function VIPRegistrationForm() {
 
                         <div className="grid grid-cols-1 gap-4">
                             <div>
-                                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Package PIN <span className="text-red-500">*</span></label>
+                                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">meeting code <span className="text-red-500">*</span></label>
                                 <Field name="pin" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all font-bold text-slate-700 placeholder-slate-400 uppercase tracking-widest" placeholder="Enter PIN" />
                                 <ErrorMessage name="pin" component="div" className="text-red-500 text-xs mt-1 font-medium" />
                             </div>
