@@ -32,6 +32,8 @@ interface ReferralStats {
 interface GalleryItem {
   _id: string;
   imageUrl: string;
+  heading?: string;
+  subheading?: string;
   description?: string;
   createdAt: string;
 }
@@ -256,10 +258,12 @@ export default function VIPProfile() {
                                   <span className="text-white text-xs font-bold uppercase tracking-widest text-center py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10">View Full</span>
                               </div>
                           </div>
-                          {item.description && (
-                             <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
-                                 <p className="text-xs text-slate-300 font-medium leading-relaxed">{item.description}</p>
-                             </div>
+                          {(item.heading || item.subheading || item.description) && (
+                              <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+                                  {item.heading && <h3 className="text-sm font-bold text-white mb-1 truncate">{item.heading}</h3>}
+                                  {item.subheading && <p className="text-xs text-amber-400 font-bold uppercase tracking-wider mb-2 truncate">{item.subheading}</p>}
+                                  {item.description && <p className="text-xs text-slate-300 font-medium leading-relaxed">{item.description}</p>}
+                              </div>
                           )}
                       </div>
                   ))}

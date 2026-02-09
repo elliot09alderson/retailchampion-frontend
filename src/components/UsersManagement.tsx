@@ -55,6 +55,35 @@ export default function UsersManagement() {
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
 
+  // New Filters
+  const [selectedContest, setSelectedContest] = useState('');
+  const [selectedPackage, setSelectedPackage] = useState<number | ''>('');
+  const [contests, setContests] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
+
+  const fetchFilterOptions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Fetch Packages
+      const pkgRes = await fetch(API_ENDPOINTS.PACKAGES.LIST, {
+         headers: { Authorization: `Bearer ${token}` }
+      });
+      const pkgData = await pkgRes.json();
+      if(pkgData.success) setPackages(pkgData.data);
+
+      // Fetch Contests
+      const contestRes = await fetch(API_ENDPOINTS.LOTTERY.HISTORY, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const contestData = await contestRes.json();
+      if(contestData.success) setContests(contestData.data);
+    } catch(e) { console.error('Failed to fetch filters', e); }
+  };
+
 
 
   // Fetch users
@@ -70,6 +99,8 @@ export default function UsersManagement() {
         sortBy,
         sortOrder,
         ...(search && { search }),
+        ...(selectedPackage && { package: selectedPackage.toString() }),
+        ...(selectedContest && { contest: selectedContest }),
       });
 
       const response = await fetch(`${API_ENDPOINTS.USERS.GET_ALL}?${params}`, {
@@ -290,7 +321,7 @@ export default function UsersManagement() {
   // Initial load and when filters change
   useEffect(() => {
     fetchUsers(1);
-  }, [search, sortBy, sortOrder, limit]);
+  }, [search, sortBy, sortOrder, limit, selectedPackage, selectedContest]);
 
   return (
     <div className="space-y-6">
@@ -334,18 +365,53 @@ export default function UsersManagement() {
       </div>
 
       {/* Filters and Search */}
+      {/* Filters and Search */}
       <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-6 shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {/* Search */}
-          <div>
+          <div className="lg:col-span-1">
             <label className="block text-slate-300 font-bold mb-2 text-xs uppercase tracking-widest">Search</label>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Name, phone, or document..."
+              placeholder="Name, phone..."
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
             />
+          </div>
+
+          {/* Filter by Contest */}
+          <div>
+            <label className="block text-slate-300 font-bold mb-2 text-xs uppercase tracking-widest">Contest</label>
+            <select
+              value={selectedContest}
+              onChange={(e) => setSelectedContest(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-slate-900">All Contests</option>
+              {contests.map(c => (
+                  <option key={c._id} value={c._id} className="bg-slate-900">
+                      {c.eventName} ({c.package})
+                  </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter by Package */}
+          <div>
+            <label className="block text-slate-300 font-bold mb-2 text-xs uppercase tracking-widest">Package</label>
+            <select
+              value={selectedPackage}
+              onChange={(e) => setSelectedPackage(e.target.value ? Number(e.target.value) : '')}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-slate-900">All Packages</option>
+              {packages.map(p => (
+                  <option key={p._id} value={p.amount} className="bg-slate-900">
+                      ₹{p.amount} - {p.name}
+                  </option>
+              ))}
+            </select>
           </div>
 
           {/* Sort By */}

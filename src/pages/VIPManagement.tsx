@@ -29,6 +29,8 @@ interface VIPReferral {
 interface GalleryItem {
   _id: string;
   imageUrl: string;
+  heading?: string;
+  subheading?: string;
   description?: string;
   createdAt: string;
 }
@@ -52,6 +54,8 @@ export default function VIPManagement() {
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [newHeading, setNewHeading] = useState('');
+  const [newSubheading, setNewSubheading] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
 
@@ -150,11 +154,17 @@ export default function VIPManagement() {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}` 
             },
-            body: JSON.stringify({ description: newDescription })
+            body: JSON.stringify({ 
+                heading: newHeading,
+                subheading: newSubheading,
+                description: newDescription 
+            })
         });
         const data = await res.json();
         if (data.success) {
             setGalleryItems(galleryItems.map(i => i._id === editingItem._id ? data.data : i));
+            setNewHeading('');
+            setNewSubheading('');
             setNewDescription('');
             setEditingItem(null);
             setMessage({ type: 'success', text: 'Item updated successfully' });
@@ -175,6 +185,8 @@ export default function VIPManagement() {
       const file = e.target.files[0];
       const formData = new FormData();
       formData.append('image', file);
+      formData.append('heading', newHeading);
+      formData.append('subheading', newSubheading);
       formData.append('description', newDescription);
 
       setUploading(true);
@@ -187,6 +199,8 @@ export default function VIPManagement() {
           const data = await res.json();
           if (data.success) {
                setGalleryItems([data.data, ...galleryItems]);
+               setNewHeading('');
+               setNewSubheading('');
                setNewDescription('');
                setMessage({ type: 'success', text: 'Image uploaded successfully' });
           } else {
@@ -677,7 +691,7 @@ export default function VIPManagement() {
                       </h2>
                       <p className="text-slate-400 text-xs mt-1">Manage global photos visible to all VIPs</p>
                   </div>
-                  <button onClick={() => { setShowGalleryModal(false); setEditingItem(null); setNewDescription(''); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                  <button onClick={() => { setShowGalleryModal(false); setEditingItem(null); setNewHeading(''); setNewSubheading(''); setNewDescription(''); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                       <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                </div>
@@ -689,14 +703,32 @@ export default function VIPManagement() {
                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">
                            {editingItem ? 'Edit Winner Details' : 'Add New Winner'}
                        </h3>
-                       <div className="flex flex-col md:flex-row gap-4">
+                       <div className="flex flex-col gap-4">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <input 
+                                    type="text" 
+                                    placeholder="Heading (e.g. Winner Name)" 
+                                    value={newHeading}
+                                    onChange={(e) => setNewHeading(e.target.value)}
+                                    className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                               />
+                               <input 
+                                    type="text" 
+                                    placeholder="Subheading (e.g. Month/Year)" 
+                                    value={newSubheading}
+                                    onChange={(e) => setNewSubheading(e.target.value)}
+                                    className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                               />
+                           </div>
                            <input 
                                 type="text" 
                                 placeholder="Description (e.g. Winner of January 2026 Contest)" 
                                 value={newDescription}
                                 onChange={(e) => setNewDescription(e.target.value)}
-                                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
                            />
+                           
+                           <div className="flex justify-end pt-2">
                            {editingItem ? (
                                <div className="flex gap-2">
                                    <button 
@@ -707,7 +739,7 @@ export default function VIPManagement() {
                                        {uploading ? 'Updating...' : 'Update'}
                                    </button>
                                    <button 
-                                     onClick={() => { setEditingItem(null); setNewDescription(''); }}
+                                     onClick={() => { setEditingItem(null); setNewHeading(''); setNewSubheading(''); setNewDescription(''); }}
                                      className="px-4 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl font-bold transition-all"
                                    >
                                        Cancel
@@ -724,6 +756,7 @@ export default function VIPManagement() {
                                    <span className="font-bold text-white text-sm">Upload Photo</span>
                                </label>
                            )}
+                           </div>
                        </div>
                    </div>
 
@@ -747,6 +780,8 @@ export default function VIPManagement() {
                                                 <button 
                                                     onClick={() => {
                                                         setEditingItem(item);
+                                                        setNewHeading(item.heading || '');
+                                                        setNewSubheading(item.subheading || '');
                                                         setNewDescription(item.description || '');
                                                     }} 
                                                     className="flex-1 p-2 bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-colors text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1"
@@ -760,8 +795,12 @@ export default function VIPManagement() {
                                            </div>
                                        </div>
                                    </div>
-                                   <div className="mt-2 text-xs text-slate-400 line-clamp-2 px-1">
-                                       {item.description || 'No description'}
+                                   <div className="mt-2 px-1">
+                                       {item.heading && <div className="text-sm font-bold text-white truncate">{item.heading}</div>}
+                                       {item.subheading && <div className="text-xs text-blue-400 truncate">{item.subheading}</div>}
+                                       <div className="text-xs text-slate-400 line-clamp-2 mt-1">
+                                           {item.description || 'No description'}
+                                       </div>
                                    </div>
                                </div>
                            ))
