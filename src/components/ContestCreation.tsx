@@ -5,7 +5,11 @@ import { API_ENDPOINTS } from '../config/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
-export default function ContestCreation() {
+interface ContestCreationProps {
+    superWinnerIds?: string[] | null;
+}
+
+export default function ContestCreation({ superWinnerIds }: ContestCreationProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'manual' | 'scheduled'>('manual');
   const [loading, setLoading] = useState(false);
@@ -40,8 +44,12 @@ export default function ContestCreation() {
   }, []);
 
   useEffect(() => {
+      if (superWinnerIds && superWinnerIds.length > 0) {
+          setParticipantCount(superWinnerIds.length);
+          return;
+      }
       fetchParticipantCount();
-  }, [selectedPackage, startDate, endDate, activeTab]);
+  }, [selectedPackage, startDate, endDate, activeTab, superWinnerIds]);
 
   const fetchParticipantCount = async () => {
       if (!selectedPackage) return;
@@ -73,7 +81,7 @@ export default function ContestCreation() {
       const data = await res.json();
       if (data.success) {
         setPackages(data.data);
-        if (data.data.length > 0) setSelectedPackage(data.data[0].amount);
+        if (data.data.length > 0 && !superWinnerIds) setSelectedPackage(data.data[0].amount);
       }
     } catch (err) {
       console.error(err);
@@ -111,6 +119,7 @@ export default function ContestCreation() {
           startDate: activeTab === 'scheduled' && startDate ? new Date(startDate).toISOString() : undefined,
           endDate: activeTab === 'scheduled' && endDate ? new Date(endDate).toISOString() : undefined,
           prizes: useCustomPrizes ? prizes : [],
+          participantIds: superWinnerIds || undefined,
         }),
       });
       
@@ -178,18 +187,30 @@ export default function ContestCreation() {
               {/* Package Selection */}
               <div>
                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-3 block">Package</label>
-                  <div className="grid grid-cols-2 gap-3">
-                      {packages.map(pkg => (
-                          <button 
-                            key={pkg._id} 
-                            onClick={() => setSelectedPackage(pkg.amount)}
-                            className={`p-3 rounded-xl border font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 ${selectedPackage === pkg.amount ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                          >
-                              <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{pkg.name}</span>
-                              <span className="text-lg">₹{pkg.amount}</span>
-                          </button>
-                      ))}
-                  </div>
+                  {superWinnerIds && superWinnerIds.length > 0 ? (
+                      <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-xl p-4 flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-600/20">
+                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                          </div>
+                          <div>
+                              <h4 className="font-black text-white text-lg">Super Winner Contest</h4>
+                              <p className="text-xs text-slate-400">Exclusive contest for {superWinnerIds.length} selected winners</p>
+                          </div>
+                      </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                        {packages.map(pkg => (
+                            <button 
+                                key={pkg._id} 
+                                onClick={() => setSelectedPackage(pkg.amount)}
+                                className={`p-3 rounded-xl border font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 ${selectedPackage === pkg.amount ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                            >
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{pkg.name}</span>
+                                <span className="text-lg">₹{pkg.amount}</span>
+                            </button>
+                        ))}
+                    </div>
+                  )}
               </div>
 
               {/* Date Inputs (Scheduled Only) */}

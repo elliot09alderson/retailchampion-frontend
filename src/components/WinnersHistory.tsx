@@ -42,9 +42,10 @@ interface WinnersHistoryProps {
     contest?: string;
     package?: string;
   };
+  onCreateSuperContest?: (ids: string[]) => void;
 }
 
-export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) {
+export default function WinnersHistory({ initialFilters, onCreateSuperContest }: WinnersHistoryProps) {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +59,9 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
   // Delete all states
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deleteAllInput, setDeleteAllInput] = useState('');
+  
+  // View Type (Regular vs Super)
+  const [viewType, setViewType] = useState<'regular' | 'super'>('regular');
 
   // Pagination & Filtering states
   const [currentPage, setCurrentPage] = useState(1);
@@ -176,6 +180,11 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
   const flattenedData = useMemo(() => {
     const entries: WinnerEntry[] = [];
     contests.forEach(contest => {
+      // Filter based on viewType
+      const isSuper = contest.package === 0;
+      if (viewType === 'regular' && isSuper) return;
+      if (viewType === 'super' && !isSuper) return;
+
       if (contest.winners && contest.winners.length > 0) {
         contest.winners.forEach((winner, index) => {
           entries.push({
@@ -202,7 +211,7 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
       }
     });
     return entries;
-  }, [contests]);
+  }, [contests, viewType]);
 
   // Filter, search, and sort rows
   const filteredData = useMemo(() => {
@@ -519,50 +528,99 @@ export default function WinnersHistory({ initialFilters }: WinnersHistoryProps) 
     printWindow.document.close();
   };
 
+  const handleCreateSuperContest = () => {
+    if (!onCreateSuperContest) return;
+    const ids = Array.from(new Set(filteredData.map(entry => entry.winner._id).filter(Boolean)));
+    if (ids.length === 0) {
+        alert('No winners found to create contest from.');
+        return;
+    }
+    onCreateSuperContest(ids);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Winners Circle</h2>
-          <p className="text-slate-300 mt-1">Hall of fame for all past champions</p>
-        </div>
-        {contests.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Export CSV Button */}
-            <button
-              onClick={exportToCSV}
-              className="px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export CSV
-            </button>
-
-            {/* Export PDF Button */}
-            <button
-              onClick={exportToPDF}
-              className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              Export PDF
-            </button>
-
-            {/* Delete All Button */}
-            <button
-              onClick={() => setShowDeleteAllModal(true)}
-              className="px-4 py-3 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete All
-            </button>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white tracking-tight">Winners Circle</h2>
+            <p className="text-slate-300 mt-1">Hall of fame for all past champions</p>
           </div>
-        )}
+          {contests.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Export CSV Button */}
+              <button
+                onClick={exportToCSV}
+                className="px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export CSV
+              </button>
+  
+              {/* Export PDF Button */}
+              <button
+                onClick={exportToPDF}
+                className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Export PDF
+              </button>
+  
+              {/* Create Super Winner Contest Button */}
+              {onCreateSuperContest && viewType === 'regular' && (
+                  <button
+                  onClick={handleCreateSuperContest}
+                  className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center gap-2"
+                  >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Create Super Winner Contest
+                  </button>
+              )}
+  
+              {/* Delete All Button */}
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="px-4 py-3 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete All
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* View Type Tabs */}
+        <div className="flex p-1 bg-white/5 border border-white/10 rounded-xl w-fit">
+            <button
+                onClick={() => setViewType('regular')}
+                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                    viewType === 'regular' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+                Regular Winners
+            </button>
+            <button
+                onClick={() => setViewType('super')}
+                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                    viewType === 'super' 
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+                Super Winners
+            </button>
+        </div>
       </div>
 
       {/* Controls */}

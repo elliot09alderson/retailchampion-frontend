@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 import PackagesManagement from '../components/PackagesManagement';
+import RechargePacksManagement from '../components/RechargePacksManagement';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -38,12 +39,13 @@ interface GalleryItem {
 export default function VIPManagement() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const initialTab = (searchParams.get('tab') as 'vip' | 'vvip' | 'packages') || 'vip';
+  const initialTab = (searchParams.get('tab') as 'vip' | 'vvip' | 'packages' | 'recharge-packs') || 'vip';
 
-  const [activeTab, setActiveTab] = useState<'vip' | 'vvip' | 'packages'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'vip' | 'vvip' | 'packages' | 'recharge-packs'>(initialTab);
   const [vips, setVips] = useState<VIP[]>([]);
   const [vvips, setVvips] = useState<VIP[]>([]);
   const [loading, setLoading] = useState(false);
+  const [availablePacks, setAvailablePacks] = useState<any[]>([]); // Using any for simplicity or define interface
   const [selectedVIP, setSelectedVIP] = useState<VIP | null>(null);
   const [referrals, setReferrals] = useState<VIPReferral[]>([]);
   const [referralStats, setReferralStats] = useState<{ total: number; vipCount: number; vvipCount: number } | null>(null);
@@ -58,6 +60,25 @@ export default function VIPManagement() {
   const [newSubheading, setNewSubheading] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+
+  // Recharge State
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [rechargeData, setRechargeData] = useState({
+      couponCode: '',
+      referralForms: '10', // Default pack count
+      expiryDate: '',
+      type: 'retail' as 'retail' | 'vip',
+  });
+
+  const fetchAvailablePacks = async () => {
+    try {
+        const res = await fetch(API_ENDPOINTS.RECHARGE_PACKS.LIST, {
+             headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if(data.success) setAvailablePacks(data.data);
+    } catch(e) { console.error('Failed to fetch packs', e); }
+  };
 
   const token = localStorage.getItem('token');
 
@@ -234,6 +255,34 @@ export default function VIPManagement() {
       }
   };
 
+  const handleRecharge = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+          const res = await fetch(API_ENDPOINTS.VIP.RECHARGE, {
+              method: 'POST',
+              headers: { 
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify(rechargeData)
+          });
+          const data = await res.json();
+          if (data.success) {
+               setMessage({ type: 'success', text: 'VIP account recharged successfully' });
+               setShowRechargeModal(false);
+               setRechargeData({ couponCode: '', referralForms: '10', expiryDate: '', type: 'retail' });
+               // Refresh lists
+               fetchVIPs();
+               fetchVVIPs();
+          } else {
+               setMessage({ type: 'error', text: data.message });
+          }
+      } catch (err) {
+          console.error(err);
+          setMessage({ type: 'error', text: 'Recharge failed' });
+      }
+  };
+
   useEffect(() => {
     if (activeTab === 'vip') {
       fetchVIPs();
@@ -241,6 +290,14 @@ export default function VIPManagement() {
       fetchVVIPs();
     }
   }, [activeTab]);
+
+  useEffect(() => { // 5. Call fetchAvailablePacks on mount
+    if (token) {
+      fetchVIPs();
+      fetchVVIPs();
+      fetchAvailablePacks();
+    }
+  }, [token]);
 
   useEffect(() => {
     if (message) {
@@ -389,7 +446,7 @@ export default function VIPManagement() {
             <p className="text-slate-400 text-sm mt-1">Manage VIPs and VVIPs, generate referral codes</p>
           </div>
           <div className="flex gap-3">
-             {activeTab !== 'packages' && (
+             {activeTab !== 'packages' && activeTab !== 'recharge-packs' && (
                <>
                  <button
                     onClick={exportToCSV}
@@ -425,6 +482,15 @@ export default function VIPManagement() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 Winner Gallery
              </button>
+
+             <button
+                onClick={() => setShowRechargeModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold rounded-lg shadow-lg shadow-yellow-500/20 transition-all flex items-center gap-2"
+             >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Recharge
+             </button>
+
              <Link
                 to="/admin/lottery"
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
@@ -477,11 +543,23 @@ export default function VIPManagement() {
           >
             VIP Packages
           </button>
+          <button // 6. Add 'Recharge Packs' tab button
+            onClick={() => setActiveTab('recharge-packs')}
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'recharge-packs'
+                ? 'bg-green-500 text-black'
+                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+          >
+            Recharge Packs
+          </button>
         </div>
 
         {/* Content Area */}
         {activeTab === 'packages' ? (
              <PackagesManagement mode="vip" />
+        ) : activeTab === 'recharge-packs' ? ( // 6. Render RechargePacksManagement
+             <RechargePacksManagement />
         ) : (
              <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                 {loading ? (
@@ -809,6 +887,91 @@ export default function VIPManagement() {
                </div>
             </div>
           </div>
+        )}
+
+        {/* Recharge Modal */}
+        {showRechargeModal && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-md w-full overflow-hidden">
+                    <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-white">Recharge VIP Account</h2>
+                        <button onClick={() => setShowRechargeModal(false)} className="text-slate-400 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    </div>
+                    <form onSubmit={handleRecharge} className="p-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-400 mb-1">VIP Login Code</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={rechargeData.couponCode}
+                                onChange={(e) => setRechargeData({...rechargeData, couponCode: e.target.value.toUpperCase()})}
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-500/50 focus:outline-none font-mono"
+                                placeholder="e.g. ABC1234"
+                            />
+                        </div>
+
+                        <div>
+                             <label className="block text-sm font-bold text-slate-400 mb-1">Recharge For</label>
+                             <div className="flex gap-2">
+                                 <button
+                                     type="button"
+                                     onClick={() => setRechargeData({ ...rechargeData, type: 'retail' })}
+                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'retail' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10'}`}
+                                 >
+                                     Retail Forms
+                                 </button>
+                                 <button
+                                     type="button"
+                                     onClick={() => setRechargeData({ ...rechargeData, type: 'vip' })}
+                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10'}`}
+                                 >
+                                     VIP Forms
+                                 </button>
+                             </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-400 mb-1">Select Referral Pack</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {availablePacks.filter(p => p.type === rechargeData.type).map(pack => (
+                                    <label key={pack._id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${rechargeData.referralForms === pack.count.toString() ? 'bg-yellow-500/10 border-yellow-500' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="radio" 
+                                                name="pack" 
+                                                value={pack.count}
+                                                checked={rechargeData.referralForms === pack.count.toString()}
+                                                onChange={(e) => setRechargeData({...rechargeData, referralForms: e.target.value})}
+                                                className="text-yellow-500 focus:ring-yellow-500"
+                                            />
+                                            <div>
+                                                <p className="font-bold text-white">{pack.name}</p>
+                                                <p className="text-xs text-slate-400">{pack.count} Referrals</p>
+                                            </div>
+                                        </div>
+                                        <span className="font-mono text-yellow-400 font-bold">₹{pack.price}</span>
+                                    </label>
+                                ))}
+                                {availablePacks.filter(p => p.type === rechargeData.type).length === 0 && (
+                                    <p className="text-slate-500 text-sm text-center py-4">No pack available for {rechargeData.type}</p>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                             <label className="block text-sm font-bold text-slate-400 mb-1">Expiry Date</label>
+                             <input 
+                                 type="date" 
+                                 required
+                                 value={rechargeData.expiryDate}
+                                 onChange={(e) => setRechargeData({...rechargeData, expiryDate: e.target.value})}
+                                 className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-500/50 focus:outline-none"
+                             />
+                        </div>
+                        <button type="submit" className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-all shadow-lg shadow-yellow-500/20 mt-2">
+                            Recharge Account
+                        </button>
+                    </form>
+                </div>
+            </div>
         )}
       </div>
     </div>

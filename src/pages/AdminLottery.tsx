@@ -34,6 +34,7 @@ export default function AdminLottery() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [winnersFilters, setWinnersFilters] = useState<{ contest?: string, package?: string }>({});
+  const [superWinnerIds, setSuperWinnerIds] = useState<string[] | null>(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Fetch dashboard data
@@ -278,11 +279,15 @@ export default function AdminLottery() {
                                                         <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-4 border-b border-white/10">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-                                                                        <span className="font-black text-white text-sm">₹</span>
+                                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pkg.amount === 0 ? 'bg-purple-600' : 'bg-blue-600'}`}>
+                                                                        {pkg.amount === 0 ? (
+                                                                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                        ) : (
+                                                                           <span className="font-black text-white text-sm">₹</span>
+                                                                        )}
                                                                     </div>
                                                                     <div>
-                                                                        <h4 className="font-black text-white text-lg">₹{pkg.amount.toLocaleString()} Pack</h4>
+                                                                        <h4 className="font-black text-white text-lg">{pkg.amount === 0 ? 'Universal' : `₹${pkg.amount.toLocaleString()} Pack`}</h4>
                                                                         <p className="text-slate-400 text-xs">{pkg.name || 'Package'}</p>
                                                                     </div>
                                                                 </div>
@@ -348,9 +353,17 @@ export default function AdminLottery() {
                                 <OperationalGuidelines />
                             </div>
                         )}
-                        {activeView === 'create_contest' && <ContestCreation />}
+                        {activeView === 'create_contest' && <ContestCreation superWinnerIds={superWinnerIds} />}
                         {activeView === 'users' && <UsersManagement />}
-                        {activeView === 'winners' && <WinnersHistory initialFilters={winnersFilters} />}
+                        {activeView === 'winners' && (
+                            <WinnersHistory 
+                                initialFilters={winnersFilters} 
+                                onCreateSuperContest={(ids: string[]) => {
+                                    setSuperWinnerIds(ids);
+                                    setActiveView('create_contest');
+                                }} 
+                            />
+                        )}
                         {activeView === 'history' && (
                             <ContestHistory 
                                 onNavigateWinners={(contestName, packageAmount) => {

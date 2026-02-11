@@ -68,6 +68,8 @@ export const API_ENDPOINTS = {
     ATTENDANCE: `${API_BASE_URL}/api/vip/attendance`,
     DELETE: (id: string) => `${API_BASE_URL}/api/vip/${id}`,
     DELETE_ALL: `${API_BASE_URL}/api/vip/delete-all`,
+    RECHARGE: `${API_BASE_URL}/api/vip/recharge`,
+    REGISTER_REFERRAL: `${API_BASE_URL}/api/vip/register-referral`,
   },
   GALLERY: {
     LIST: `${API_BASE_URL}/api/gallery`,
@@ -77,6 +79,12 @@ export const API_ENDPOINTS = {
   },
   LOGS: {
     LOG: `${API_BASE_URL}/api/logs/log`,
+  },
+  RECHARGE_PACKS: {
+      LIST: `${API_BASE_URL}/api/recharge-packs`,
+      CREATE: `${API_BASE_URL}/api/recharge-packs`,
+      UPDATE: (id: string) => `${API_BASE_URL}/api/recharge-packs/${id}`,
+      DELETE: (id: string) => `${API_BASE_URL}/api/recharge-packs/${id}`,
   },
 };
 
