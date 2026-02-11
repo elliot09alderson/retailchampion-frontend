@@ -19,6 +19,8 @@ interface VIPUser {
   referralExpiryDate?: string;
   retailReferralExpiryDate?: string;
   vipReferralExpiryDate?: string;
+  activeRetailPackName?: string;
+  activeVipPackName?: string;
   aadhaarNumber?: string;
   panNumber?: string;
   bankName?: string;
@@ -369,7 +371,10 @@ export default function VIPProfile() {
              <div className="flex items-center gap-6">
                  <div>
                      <p className="text-2xl font-black text-emerald-400">{user.retailReferralFormsLeft || 0}</p>
-                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Retail Forms</p>
+                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                        Retail Forms 
+                        {user.activeRetailPackName && <span className="block text-emerald-500 normal-case">{user.activeRetailPackName}</span>}
+                     </p>
                      <p className="text-[10px] text-slate-400 mt-1">
                         Expires: <span className="text-white">{user.retailReferralExpiryDate ? new Date(user.retailReferralExpiryDate).toLocaleDateString() : (user.referralExpiryDate ? new Date(user.referralExpiryDate).toLocaleDateString() : 'No Expiry')}</span>
                      </p>
@@ -377,7 +382,10 @@ export default function VIPProfile() {
                  <div className="h-10 w-px bg-white/10"></div>
                  <div>
                      <p className="text-2xl font-black text-yellow-400">{user.vipReferralFormsLeft || 0}</p>
-                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">VIP Forms</p>
+                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                        VIP Forms
+                        {user.activeVipPackName && <span className="block text-yellow-500 normal-case">{user.activeVipPackName}</span>}
+                     </p>
                      <p className="text-[10px] text-slate-400 mt-1">
                         Expires: <span className="text-white">{user.vipReferralExpiryDate ? new Date(user.vipReferralExpiryDate).toLocaleDateString() : (user.referralExpiryDate ? new Date(user.referralExpiryDate).toLocaleDateString() : 'No Expiry')}</span>
                      </p>

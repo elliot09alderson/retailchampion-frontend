@@ -16,6 +16,10 @@ interface VIP {
   referralCode: string | null;
   referralCount: number;
   selfieUrl?: string;
+  retailReferralFormsLeft?: number;
+  vipReferralFormsLeft?: number;
+  activeRetailPackName?: string;
+  activeVipPackName?: string;
   createdAt: string;
 }
 
@@ -63,11 +67,13 @@ export default function VIPManagement() {
 
   // Recharge State
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [selectedRechargeUser, setSelectedRechargeUser] = useState<VIP | null>(null);
   const [rechargeData, setRechargeData] = useState({
       couponCode: '',
       referralForms: '10', // Default pack count
       expiryDate: '',
       type: 'retail' as 'retail' | 'vip',
+      packName: '',
   });
 
   const fetchAvailablePacks = async () => {
@@ -270,7 +276,8 @@ export default function VIPManagement() {
           if (data.success) {
                setMessage({ type: 'success', text: 'VIP account recharged successfully' });
                setShowRechargeModal(false);
-               setRechargeData({ couponCode: '', referralForms: '10', expiryDate: '', type: 'retail' });
+               setRechargeData({ couponCode: '', referralForms: '10', expiryDate: '', type: 'retail', packName: '' });
+               setSelectedRechargeUser(null);
                // Refresh lists
                fetchVIPs();
                fetchVVIPs();
@@ -662,6 +669,23 @@ export default function VIPManagement() {
                             <td className="px-6 py-4">
                             <div className="flex gap-2">
                                 <button
+                                    onClick={() => {
+                                        setSelectedRechargeUser(vip);
+                                        setRechargeData({ 
+                                            couponCode: vip.couponCode, 
+                                            referralForms: '', 
+                                            expiryDate: '', 
+                                            type: 'retail', 
+                                            packName: '' 
+                                        });
+                                        setShowRechargeModal(true);
+                                    }}
+                                    className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg transition-all border border-emerald-500/20"
+                                    title="Recharge User"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                </button>
+                                <button
                                     onClick={() => generateReferralCode(vip._id)}
                                     disabled={!!vip.referralCode}
                                     title={vip.referralCode ? 'Code Generated' : 'Generate Referral Code'}
@@ -889,7 +913,6 @@ export default function VIPManagement() {
           </div>
         )}
 
-        {/* Recharge Modal */}
         {showRechargeModal && (
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
                 <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-md w-full overflow-hidden">
@@ -898,6 +921,15 @@ export default function VIPManagement() {
                         <button onClick={() => setShowRechargeModal(false)} className="text-slate-400 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
                     <form onSubmit={handleRecharge} className="p-6 space-y-4">
+                        {selectedRechargeUser && (
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 mb-4">
+                                <p className="font-bold text-white mb-1">{selectedRechargeUser.name}</p>
+                                <div className="flex gap-4 text-xs">
+                                    <span className={`${(selectedRechargeUser.retailReferralFormsLeft || 0) > 0 ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>Retail Left: {selectedRechargeUser.retailReferralFormsLeft || 0}</span>
+                                    <span className={`${(selectedRechargeUser.vipReferralFormsLeft || 0) > 0 ? 'text-yellow-400 font-bold' : 'text-slate-400'}`}>VIP Left: {selectedRechargeUser.vipReferralFormsLeft || 0}</span>
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-bold text-slate-400 mb-1">VIP Login Code</label>
                             <input 
@@ -916,22 +948,27 @@ export default function VIPManagement() {
                                  <button
                                      type="button"
                                      onClick={() => setRechargeData({ ...rechargeData, type: 'retail' })}
-                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'retail' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10'}`}
+                                     disabled={selectedRechargeUser ? (selectedRechargeUser.retailReferralFormsLeft || 0) > 0 : false}
+                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'retail' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10'} ${selectedRechargeUser && (selectedRechargeUser.retailReferralFormsLeft || 0) > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                  >
                                      Retail Forms
                                  </button>
                                  <button
                                      type="button"
                                      onClick={() => setRechargeData({ ...rechargeData, type: 'vip' })}
-                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10'}`}
+                                     disabled={selectedRechargeUser ? (selectedRechargeUser.vipReferralFormsLeft || 0) > 0 : false}
+                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10'} ${selectedRechargeUser && (selectedRechargeUser.vipReferralFormsLeft || 0) > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                  >
                                      VIP Forms
                                  </button>
                              </div>
+                             {selectedRechargeUser && ((rechargeData.type === 'retail' && (selectedRechargeUser.retailReferralFormsLeft || 0) > 0) || (rechargeData.type === 'vip' && (selectedRechargeUser.vipReferralFormsLeft || 0) > 0)) && (
+                                <p className="text-xs text-red-400 mt-2">Current forms must be 0 to recharge.</p>
+                             )}
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-slate-400 mb-1">Select Referral Pack</label>
-                            <div className="grid grid-cols-1 gap-2">
+                            <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2">
                                 {availablePacks.filter(p => p.type === rechargeData.type).map(pack => (
                                     <label key={pack._id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${rechargeData.referralForms === pack.count.toString() ? 'bg-yellow-500/10 border-yellow-500' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
                                         <div className="flex items-center gap-3">
@@ -940,7 +977,7 @@ export default function VIPManagement() {
                                                 name="pack" 
                                                 value={pack.count}
                                                 checked={rechargeData.referralForms === pack.count.toString()}
-                                                onChange={(e) => setRechargeData({...rechargeData, referralForms: e.target.value})}
+                                                onChange={() => setRechargeData({...rechargeData, referralForms: pack.count.toString(), packName: pack.name})}
                                                 className="text-yellow-500 focus:ring-yellow-500"
                                             />
                                             <div>
