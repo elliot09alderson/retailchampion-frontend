@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `${API_BASE_URL}/api/vip/${id}`,
     DELETE_ALL: `${API_BASE_URL}/api/vip/delete-all`,
     RECHARGE: `${API_BASE_URL}/api/vip/recharge`,
+    DEACTIVATE_RECHARGE: `${API_BASE_URL}/api/vip/deactivate-recharge`,
     REGISTER_REFERRAL: `${API_BASE_URL}/api/vip/register-referral`,
   },
   GALLERY: {

@@ -75,6 +75,38 @@ export default function VIPManagement() {
       type: 'retail' as 'retail' | 'vip',
       packName: '',
   });
+  const [rechargeAll, setRechargeAll] = useState(false);
+
+  const handleDeactivateRecharge = async (userId?: string, userName?: string, deactivateAll: boolean = false) => {
+    if (!confirm(deactivateAll ? 'WARNING: This will reset balances for ALL VIP users. Are you sure?' : `Reset balance for ${userName}?`)) return;
+
+    try {
+        const payload: any = { deactivateAll };
+        if (!deactivateAll && userId) {
+            const user = vips.find(v => v._id === userId) || vvips.find(v => v._id === userId);
+            if (user) payload.couponCode = user.couponCode;
+            else return;
+        }
+
+        const res = await fetch(API_ENDPOINTS.VIP.DEACTIVATE_RECHARGE, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+             body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            setMessage({ type: 'success', text: data.message });
+            fetchVIPs();
+            fetchVVIPs();
+        } else {
+            setMessage({ type: 'error', text: data.message });
+        }
+    } catch(e) {
+        console.error(e);
+        setMessage({ type: 'error', text: 'Deactivation failed' });
+    }
+  };
 
   const fetchAvailablePacks = async () => {
     try {
@@ -270,13 +302,14 @@ export default function VIPManagement() {
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${token}` 
               },
-              body: JSON.stringify(rechargeData)
+              body: JSON.stringify({ ...rechargeData, rechargeAll })
           });
           const data = await res.json();
           if (data.success) {
-               setMessage({ type: 'success', text: 'VIP account recharged successfully' });
+               setMessage({ type: 'success', text: data.message });
                setShowRechargeModal(false);
                setRechargeData({ couponCode: '', referralForms: '10', expiryDate: '', type: 'retail', packName: '' });
+               setRechargeAll(false);
                setSelectedRechargeUser(null);
                // Refresh lists
                fetchVIPs();
@@ -475,6 +508,15 @@ export default function VIPManagement() {
              )}
 
              <button
+                onClick={() => handleDeactivateRecharge(undefined, undefined, true)}
+                className="px-4 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white rounded-lg text-sm font-bold border border-orange-600/20 transition-all flex items-center gap-2"
+                title="Reset All Balances"
+             >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Reset All Balances
+             </button>
+
+             <button
                 onClick={handleDeleteAll}
                 className="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg text-sm font-bold border border-red-600/20 transition-all flex items-center gap-2"
              >
@@ -668,6 +710,13 @@ export default function VIPManagement() {
                             </td>
                             <td className="px-6 py-4">
                             <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleDeactivateRecharge(vip._id, vip.name)}
+                                    className="p-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white rounded-lg transition-all border border-orange-600/20"
+                                    title="Reset Balance (Deactivate Recharge)"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                </button>
                                 <button
                                     onClick={() => {
                                         setSelectedRechargeUser(vip);
@@ -931,39 +980,71 @@ export default function VIPManagement() {
                             </div>
                         )}
                         <div>
-                            <label className="block text-sm font-bold text-slate-400 mb-1">VIP Login Code</label>
-                            <input 
-                                type="text" 
-                                required
-                                value={rechargeData.couponCode}
-                                onChange={(e) => setRechargeData({...rechargeData, couponCode: e.target.value.toUpperCase()})}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-500/50 focus:outline-none font-mono"
-                                placeholder="e.g. ABC1234"
-                            />
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-bold text-slate-400">Target User</label>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setRechargeAll(!rechargeAll);
+                                        setSelectedRechargeUser(null);
+                                        if(!rechargeAll) setRechargeData({ ...rechargeData, couponCode: '' });
+                                    }}
+                                    className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${rechargeAll ? 'bg-purple-600 text-white ring-2 ring-purple-400' : 'bg-white/10 text-slate-400 hover:text-white'}`}
+                                >
+                                    {rechargeAll ? 'Recharging ALL VIPs' : 'Recharge Specific User'}
+                                </button>
+                            </div>
+                            
+                            {rechargeAll ? (
+                                <div className="bg-purple-500/10 border border-purple-500/50 rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-purple-200 font-bold">Bulk Recharge</p>
+                                        <p className="text-xs text-purple-400/80">Will apply to ALL active VIP members</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">VIP Login Code</label>
+                                    <input 
+                                        type="text" 
+                                        required={!rechargeAll}
+                                        value={rechargeData.couponCode}
+                                        onChange={(e) => setRechargeData({...rechargeData, couponCode: e.target.value.toUpperCase()})}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-yellow-500/50 focus:outline-none font-mono placeholder-slate-600"
+                                        placeholder="e.g. ABC1234"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div>
-                             <label className="block text-sm font-bold text-slate-400 mb-1">Recharge For</label>
+                             <label className="block text-sm font-bold text-slate-400 mb-2">Recharge Type</label>
                              <div className="flex gap-2">
                                  <button
                                      type="button"
                                      onClick={() => setRechargeData({ ...rechargeData, type: 'retail' })}
-                                     disabled={selectedRechargeUser ? (selectedRechargeUser.retailReferralFormsLeft || 0) > 0 : false}
-                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'retail' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10'} ${selectedRechargeUser && (selectedRechargeUser.retailReferralFormsLeft || 0) > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                     className={`flex-1 py-3 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 ${rechargeData.type === 'retail' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
                                  >
+                                     <span className="w-2 h-2 rounded-full bg-current"></span>
                                      Retail Forms
                                  </button>
                                  <button
                                      type="button"
                                      onClick={() => setRechargeData({ ...rechargeData, type: 'vip' })}
-                                     disabled={selectedRechargeUser ? (selectedRechargeUser.vipReferralFormsLeft || 0) > 0 : false}
-                                     className={`flex-1 py-2 rounded-xl font-bold transition-all border ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10'} ${selectedRechargeUser && (selectedRechargeUser.vipReferralFormsLeft || 0) > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                     className={`flex-1 py-3 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
                                  >
+                                     <span className="w-2 h-2 rounded-full bg-current"></span>
                                      VIP Forms
                                  </button>
                              </div>
-                             {selectedRechargeUser && ((rechargeData.type === 'retail' && (selectedRechargeUser.retailReferralFormsLeft || 0) > 0) || (rechargeData.type === 'vip' && (selectedRechargeUser.vipReferralFormsLeft || 0) > 0)) && (
-                                <p className="text-xs text-red-400 mt-2">Current forms must be 0 to recharge.</p>
+                             {(selectedRechargeUser && !rechargeAll) && (
+                                <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Recharge will stack with existing balance.
+                                </p>
                              )}
                         </div>
                         <div>
