@@ -438,14 +438,14 @@ export default function VIPManagement() {
     <div className="min-h-screen bg-[#0f172a] text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-black tracking-tight">
               VIP <span className="text-yellow-500">Management</span>
             </h1>
             <p className="text-slate-400 text-sm mt-1">Manage VIPs and VVIPs, generate referral codes</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
              {activeTab !== 'packages' && activeTab !== 'recharge-packs' && (
                <>
                  <button
@@ -512,10 +512,10 @@ export default function VIPManagement() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-6">
+        <div className="flex gap-4 mb-6 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => setActiveTab('vip')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'vip'
                 ? 'bg-yellow-500 text-black'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
@@ -525,7 +525,7 @@ export default function VIPManagement() {
           </button>
           <button
             onClick={() => setActiveTab('vvip')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'vvip'
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
@@ -535,7 +535,7 @@ export default function VIPManagement() {
           </button>
           <button
             onClick={() => setActiveTab('packages')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'packages'
                 ? 'bg-amber-500 text-black'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
@@ -545,7 +545,7 @@ export default function VIPManagement() {
           </button>
           <button // 6. Add 'Recharge Packs' tab button
             onClick={() => setActiveTab('recharge-packs')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+            className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'recharge-packs'
                 ? 'bg-green-500 text-black'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
