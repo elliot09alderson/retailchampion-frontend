@@ -951,8 +951,8 @@ export default function VIPProfile() {
                                 >
                                     <option value="" className="bg-[#1e293b]">Select Retail Package</option>
                                     {packages.map(pkg => (
-                                        <option key={pkg._id} value={pkg.price} className="bg-[#1e293b]">
-                                            ₹{pkg.price.toLocaleString()} — {pkg.name}
+                                        <option key={pkg._id} value={pkg.amount} className="bg-[#1e293b]">
+                                            ₹{pkg.amount.toLocaleString()} — {pkg.name}
                                         </option>
                                     ))}
                                 </select>
