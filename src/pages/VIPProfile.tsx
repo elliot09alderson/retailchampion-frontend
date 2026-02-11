@@ -950,7 +950,7 @@ export default function VIPProfile() {
                                     style={{ backgroundImage: 'none' }}
                                 >
                                     <option value="" className="bg-[#1e293b]">Select Retail Package</option>
-                                    {packages.map(pkg => (
+                                    {packages.filter(pkg => !pkg.isVip).map(pkg => (
                                         <option key={pkg._id} value={pkg.amount} className="bg-[#1e293b]">
                                             ₹{pkg.amount.toLocaleString()} — {pkg.name}
                                         </option>
