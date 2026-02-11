@@ -450,6 +450,7 @@ export default function VIPProfile() {
                                 <th className="pb-3 pl-2 font-bold uppercase tracking-wider">Date</th>
                                 <th className="pb-3 font-bold uppercase tracking-wider">Pack Name</th>
                                 <th className="pb-3 font-bold uppercase tracking-wider">Forms</th>
+                                <th className="pb-3 font-bold uppercase tracking-wider">Available</th>
                                 <th className="pb-3 font-bold uppercase tracking-wider">Price</th>
                                 <th className="pb-3 pr-2 font-bold uppercase tracking-wider text-right">Expiry</th>
                             </tr>
@@ -468,6 +469,9 @@ export default function VIPProfile() {
                                     </td>
                                     <td className="py-3 text-slate-300">
                                         {item.referralForms} Forms
+                                    </td>
+                                    <td className="py-3 text-emerald-400 font-bold">
+                                        {item.referralForms - (item.formsUsed || 0)} Left
                                     </td>
                                     <td className="py-3 text-yellow-400 font-mono font-bold">
                                         ₹{item.price || 0}
