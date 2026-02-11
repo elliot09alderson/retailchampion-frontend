@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 import { toast, Toaster } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface VIPUser {
   _id: string;
@@ -275,6 +277,28 @@ export default function VIPProfile() {
     if (amount === 4500) return 'Advance';
     if (amount >= 8000) return 'Premium';
     return `₹${amount.toLocaleString()}`;
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text('My Referrals', 14, 15);
+    
+    const tableColumn = ["Name", "Phone", "Type", "Package", "Date"];
+    const tableRows = referrals.map(ref => [
+        ref.name,
+        ref.phoneNumber,
+        ref.vipStatus === 'vvip' ? 'VVIP' : ref.vipStatus === 'vip' ? 'VIP' : 'Retail',
+        ref.package ? `Rs. ${ref.package}` : '-',
+        new Date(ref.createdAt).toLocaleDateString('en-IN')
+    ]);
+
+    autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+    });
+
+    doc.save('My_Referrals.pdf');
   };
 
   const isVVIP = user.vipStatus === 'vvip';
@@ -584,6 +608,16 @@ export default function VIPProfile() {
                                 </div>
                             </div>
                             )}
+
+                            {/* Export PDF Button */}
+                            <button
+                                onClick={exportToPDF}
+                                className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ml-auto"
+                                title="Export All to PDF"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                Export PDF
+                            </button>
                         </div>
                     )}
                 </div>
