@@ -17,6 +17,8 @@ interface VIPUser {
   vipReferralFormsLeft?: number;
   retailReferralFormsLeft?: number;
   referralExpiryDate?: string;
+  retailReferralExpiryDate?: string;
+  vipReferralExpiryDate?: string;
   aadhaarNumber?: string;
   panNumber?: string;
   bankName?: string;
@@ -75,11 +77,13 @@ export default function VIPProfile() {
   const [showReferrals, setShowReferrals] = useState(false);
   const [referralTypeFilter, setReferralTypeFilter] = useState<'all' | 'vip' | 'retail' | 'vvip'>('all');
   const [packageFilter, setPackageFilter] = useState<number | 'all'>('all');
-  const [registerData, setRegisterData] = useState<{name: string, phoneNumber: string, packageAmount: string, image: File | null}>({ 
+  const [registerData, setRegisterData] = useState<{name: string, phoneNumber: string, packageAmount: string, image: File | null, idNumber: string, billImage: File | null}>({ 
       name: '', 
       phoneNumber: '',
       packageAmount: '',
-      image: null 
+      image: null,
+      idNumber: '',
+      billImage: null
   });
   const [registeredUserCode, setRegisteredUserCode] = useState<string | null>(null);
   
@@ -210,6 +214,12 @@ export default function VIPProfile() {
         if (registerData.image) {
             formData.append('image', registerData.image);
         }
+        if (registerData.idNumber) {
+            formData.append('idNumber', registerData.idNumber);
+        }
+        if (registerData.billImage) {
+            formData.append('billImage', registerData.billImage);
+        }
 
         const res = await fetch(API_ENDPOINTS.VIP.REGISTER_REFERRAL, {
             method: 'POST',
@@ -224,7 +234,7 @@ export default function VIPProfile() {
             toast.success('Registration successful');
             setShowRegisterModal(false);
             setRegisteredUserCode(data.data.couponCode); // Show success modal
-            setRegisterData({ name: '', phoneNumber: '', packageAmount: '', image: null });
+            setRegisterData({ name: '', phoneNumber: '', packageAmount: '', image: null, idNumber: '', billImage: null });
             fetchProfile(); // Refresh stats
         } else {
             toast.error(data.message);
@@ -360,18 +370,17 @@ export default function VIPProfile() {
                  <div>
                      <p className="text-2xl font-black text-emerald-400">{user.retailReferralFormsLeft || 0}</p>
                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Retail Forms</p>
+                     <p className="text-[10px] text-slate-400 mt-1">
+                        Expires: <span className="text-white">{user.retailReferralExpiryDate ? new Date(user.retailReferralExpiryDate).toLocaleDateString() : (user.referralExpiryDate ? new Date(user.referralExpiryDate).toLocaleDateString() : 'No Expiry')}</span>
+                     </p>
                  </div>
-                 <div className="h-8 w-px bg-white/10"></div>
+                 <div className="h-10 w-px bg-white/10"></div>
                  <div>
                      <p className="text-2xl font-black text-yellow-400">{user.vipReferralFormsLeft || 0}</p>
                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">VIP Forms</p>
-                 </div>
-                 <div className="h-8 w-px bg-white/10"></div>
-                 <div>
-                     <p className="text-sm font-bold text-white">
-                        {user.referralExpiryDate ? new Date(user.referralExpiryDate).toLocaleDateString() : 'No Expiry'}
+                     <p className="text-[10px] text-slate-400 mt-1">
+                        Expires: <span className="text-white">{user.vipReferralExpiryDate ? new Date(user.vipReferralExpiryDate).toLocaleDateString() : (user.referralExpiryDate ? new Date(user.referralExpiryDate).toLocaleDateString() : 'No Expiry')}</span>
                      </p>
-                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Valid Till</p>
                  </div>
              </div>
              
@@ -800,6 +809,44 @@ export default function VIPProfile() {
                                 className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:border-white/30 focus:bg-white/5 focus:outline-none transition-all"
                                 placeholder="Phone Number"
                             />
+                        </div>
+
+                        {/* ID Number Input (Optional) */}
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg className="w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .884-.5 2-2 2h4c-1.5 0-2-1.116-2-2z" /></svg>
+                            </div>
+                            <input 
+                                type="text" 
+                                value={registerData.idNumber}
+                                onChange={(e) => setRegisterData({...registerData, idNumber: e.target.value})}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:border-white/30 focus:bg-white/5 focus:outline-none transition-all"
+                                placeholder="ID Number (Optional)"
+                            />
+                        </div>
+
+                        {/* Bill Image Upload (Optional) */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Bill Image (Optional)</label>
+                            <label className={`flex items-center justify-center w-full p-4 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:border-white/20 transition-all ${registerData.billImage ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-black/20'}`}>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setRegisterData({...registerData, billImage: e.target.files ? e.target.files[0] : null})}
+                                    className="hidden"
+                                />
+                                {registerData.billImage ? (
+                                    <div className="flex items-center gap-2 text-emerald-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        <span className="text-sm font-bold truncate max-w-[200px]">{registerData.billImage.name}</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-slate-500">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        <span className="text-sm font-bold">Upload Bill Image</span>
+                                    </div>
+                                )}
+                            </label>
                         </div>
 
                         {/* Package Selection (VIP Only) */}
