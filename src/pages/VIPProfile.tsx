@@ -72,6 +72,7 @@ export default function VIPProfile() {
   const [lotteryHistory, setLotteryHistory] = useState<LotteryWinner[]>([]);
   const [stats, setStats] = useState<ReferralStats>({ total: 0, vipCount: 0, vvipCount: 0 });
   const [loading, setLoading] = useState(true);
+  const [rechargeHistory, setRechargeHistory] = useState<any[]>([]);
 
   // Registration Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -153,6 +154,7 @@ export default function VIPProfile() {
         });
         setReferrals(data.data.referrals || []);
         setStats(data.data.referralStats || { total: 0, vipCount: 0, vvipCount: 0 });
+        setRechargeHistory(data.data.rechargeHistory || []);
       } else {
         toast.error(data.message || 'Failed to load profile');
         localStorage.removeItem('vip_token');
@@ -427,6 +429,61 @@ export default function VIPProfile() {
                 </button>
              </div>
         </div>
+
+        {/* Recharge History Section */}
+        {rechargeHistory.length > 0 && (
+            <div className="mb-8 bg-white/5 border border-white/10 rounded-2xl p-6 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-yellow-500/20 text-yellow-500">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-white">Recharge History</h2>
+                        <p className="text-xs text-slate-400">Track your past recharges and their validity</p>
+                    </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="text-xs text-slate-500 border-b border-white/10">
+                                <th className="pb-3 pl-2 font-bold uppercase tracking-wider">Date</th>
+                                <th className="pb-3 font-bold uppercase tracking-wider">Pack Name</th>
+                                <th className="pb-3 font-bold uppercase tracking-wider">Forms</th>
+                                <th className="pb-3 font-bold uppercase tracking-wider">Price</th>
+                                <th className="pb-3 pr-2 font-bold uppercase tracking-wider text-right">Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {rechargeHistory.map((item: any) => (
+                                <tr key={item._id} className="text-sm group hover:bg-white/5 transition-colors">
+                                    <td className="py-3 pl-2 text-slate-400 font-mono">
+                                        {new Date(item.createdAt).toLocaleDateString()}
+                                    </td>
+                                    <td className="py-3 font-bold text-white">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${item.type === 'vip' ? 'bg-yellow-500' : 'bg-emerald-500'}`}></span>
+                                            {item.packName}
+                                        </div>
+                                    </td>
+                                    <td className="py-3 text-slate-300">
+                                        {item.referralForms} Forms
+                                    </td>
+                                    <td className="py-3 text-yellow-400 font-mono font-bold">
+                                        ₹{item.price || 0}
+                                    </td>
+                                    <td className="py-3 pr-2 text-right">
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${new Date(item.expiryDate) < new Date() ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                            {new Date(item.expiryDate).toLocaleDateString()}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        )}
 
         {/* Latest Champions / Referrals Section */}
         {(lotteryHistory.length > 0 || referrals.length > 0) && (
