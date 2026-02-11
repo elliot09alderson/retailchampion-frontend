@@ -586,12 +586,12 @@ export default function RegistrationForm() {
         </div>
         {/* Footer */}
         <div className="text-center mt-8 space-y-4">
-          <p className="text-sm text-[#64748b]">
+          {/* <p className="text-sm text-[#64748b]">
             Attending Training?{' '}
             <a href="/vip/attendance" className="text-blue-600 hover:text-blue-700 font-bold transition-colors underline-offset-2 hover:underline block mt-1">
               Training Meeting Attendance Form
             </a>
-          </p>
+          </p> */}
           {/* 
           <div className="w-12 h-px bg-slate-200 mx-auto"></div>
           <p className="text-sm text-[#64748b]">
