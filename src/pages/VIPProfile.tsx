@@ -73,6 +73,7 @@ export default function VIPProfile() {
   const [stats, setStats] = useState<ReferralStats>({ total: 0, vipCount: 0, vvipCount: 0 });
   const [loading, setLoading] = useState(true);
   const [rechargeHistory, setRechargeHistory] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
 
   // Registration Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -105,6 +106,7 @@ export default function VIPProfile() {
     fetchProfile();
     fetchGallery();
     fetchWinners();
+    fetchPackages();
   }, []);
 
   const fetchWinners = async () => {
@@ -118,6 +120,14 @@ export default function VIPProfile() {
         const data = await res.json();
         if(data.success) setLotteryHistory(data.data);
     } catch(e) { console.error(e); }
+  };
+
+  const fetchPackages = async () => {
+      try {
+          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+          const data = await res.json();
+          if(data.success) setPackages(data.data);
+      } catch(e) { console.error(e); }
   };
 
   const fetchGallery = async () => {
@@ -212,7 +222,7 @@ export default function VIPProfile() {
         formData.append('name', registerData.name);
         formData.append('phoneNumber', registerData.phoneNumber);
         formData.append('formType', registerFormType);
-        if (registerFormType === 'vip' && registerData.packageAmount) {
+        if (registerData.packageAmount) {
             formData.append('packageAmount', registerData.packageAmount);
         }
         if (registerData.image) {
@@ -925,6 +935,32 @@ export default function VIPProfile() {
                                 )}
                             </label>
                         </div>
+
+                        {/* Package Selection (Retail) */}
+                        {registerFormType === 'retail' && (
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg className="w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                                </div>
+                                <select
+                                    required
+                                    value={registerData.packageAmount}
+                                    onChange={(e) => setRegisterData({...registerData, packageAmount: e.target.value})}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white focus:border-white/30 focus:bg-white/5 focus:outline-none appearance-none transition-all cursor-pointer"
+                                    style={{ backgroundImage: 'none' }}
+                                >
+                                    <option value="" className="bg-[#1e293b]">Select Retail Package</option>
+                                    {packages.map(pkg => (
+                                        <option key={pkg._id} value={pkg.price} className="bg-[#1e293b]">
+                                            ₹{pkg.price.toLocaleString()} — {pkg.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Package Selection (VIP Only) */}
                         {registerFormType === 'vip' && (
