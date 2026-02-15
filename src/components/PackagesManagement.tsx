@@ -10,6 +10,7 @@ interface Package {
   isActive: boolean;
   isVip?: boolean;
   whatsappGroupLink?: string;
+  referralTarget?: number;
   userCount?: number;
 }
 
@@ -28,6 +29,7 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
     description: '',
     isVip: mode === 'vip', // Default to VIP if mode is VIP
     whatsappGroupLink: '',
+    referralTarget: '10',
   });
 
   // Members View State
@@ -89,7 +91,8 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
         amount: pkg.amount.toString(),
         description: pkg.description || '',
         isVip: pkg.isVip || false,
-        whatsappGroupLink: (pkg as any).whatsappGroupLink || ''
+        whatsappGroupLink: (pkg as any).whatsappGroupLink || '',
+        referralTarget: (pkg as any).referralTarget?.toString() || '10',
     });
     setEditingId(pkg._id);
     setShowAddModal(true);
@@ -119,6 +122,7 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
         body: JSON.stringify({
           ...newPackage,
           amount: Number(newPackage.amount),
+          referralTarget: newPackage.isVip ? Number(newPackage.referralTarget) : 10,
         }),
       });
 
@@ -126,7 +130,8 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
       if (data.success) {
         toast.success(editingId ? 'Package updated' : 'Package created');
         setShowAddModal(false);
-        setNewPackage({ name: '', amount: '', description: '', isVip: false, whatsappGroupLink: '' });
+        setShowAddModal(false);
+        setNewPackage({ name: '', amount: '', description: '', isVip: false, whatsappGroupLink: '', referralTarget: '10' });
         setEditingId(null);
         fetchPackages();
       } else {
@@ -173,7 +178,7 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
         <button
           onClick={() => {
             setEditingId(null);
-            setNewPackage({ name: '', amount: '', description: '', isVip: mode === 'vip', whatsappGroupLink: '' });
+            setNewPackage({ name: '', amount: '', description: '', isVip: mode === 'vip', whatsappGroupLink: '', referralTarget: '10' });
             setShowAddModal(true);
           }}
           className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2"
@@ -230,6 +235,12 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.474.875 3.183 1.357 4.935 1.358 4.833.002 8.767-3.931 8.77-8.766 0-2.343-.911-4.544-2.566-6.199s-3.855-2.566-6.198-2.567c-4.835 0-8.771 3.935-8.774 8.77-.001 1.573.411 3.103 1.196 4.453l1.01 1.742-1.071 3.91 4.008-1.051zm10.946-6.166c-.103-.173-.38-.277-.796-.485s-2.459-1.213-2.839-1.353-.657-.208-.933.208-.103.208-.069.277.103.173.208.277c.103.104.208.242.311.346.103.104.242.242.103.485s-.208.242-.484.242-.276.104-1.972-.519c-1.319-1.177-2.208-2.632-2.467-3.048s-.027-.64.18-.847c.187-.186.415-.484.622-.726.208-.242.276-.415.415-.691s.069-.519-.034-.726-.933-2.248-1.279-3.078c-.337-.813-.68-.703-.933-.716s-.519-.013-.795-.013-.726.104-1.107.519-1.453 1.419-1.453 3.46 1.487 4.012 1.694 4.288c.208.277 2.925 4.46 7.087 6.256 1.13.487 1.83.649 2.505.862.991.315 1.898.27 2.613.163.796-.118 2.316-1.141 2.645-2.248s.329-2.041.208-2.248z" /></svg>
                                     Join Group
                                 </a>
+                            )}
+                            {(pkg as any).referralTarget && (
+                                <div className="flex items-center gap-1.5 mt-2 text-purple-400 text-[10px] font-bold bg-purple-500/10 px-2 py-1 rounded w-fit">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                                    VVIP Target: {(pkg as any).referralTarget}
+                                </div>
                             )}
                             </div>
                             <div className="px-3 py-1 rounded-lg font-black text-lg bg-amber-500/20 text-amber-400">
@@ -428,6 +439,22 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
                   <p className="text-amber-500/70 text-[10px]">Enable for referral rewards & VIP benefits</p>
                 </div>
               </div>
+
+              {/* VVIP Target (Only for VIP) */}
+              {newPackage.isVip && (
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">
+                      Referrals for VVIP Promotion
+                    </label>
+                    <input
+                      type="number"
+                      value={newPackage.referralTarget}
+                      onChange={(e) => setNewPackage({ ...newPackage, referralTarget: e.target.value })}
+                      placeholder="10"
+                      className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all shadow-inner"
+                    />
+                  </div>
+              )}
 
               <div className="flex gap-4 mt-8">
                 <button

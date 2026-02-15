@@ -71,6 +71,7 @@ export const API_ENDPOINTS = {
     RECHARGE: `${API_BASE_URL}/api/vip/recharge`,
     DEACTIVATE_RECHARGE: `${API_BASE_URL}/api/vip/deactivate-recharge`,
     REGISTER_REFERRAL: `${API_BASE_URL}/api/vip/register-referral`,
+    GENERATE_PLACEHOLDER: `${API_BASE_URL}/api/vip/generate-placeholder`,
   },
   GALLERY: {
     LIST: `${API_BASE_URL}/api/gallery`,

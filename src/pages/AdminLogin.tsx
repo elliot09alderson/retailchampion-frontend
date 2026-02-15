@@ -14,6 +14,9 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
 
+    console.log('Attempting login to:', API_ENDPOINTS.AUTH.LOGIN);
+    console.log('Credentials:', { phoneNumber, password });
+
     try {
       const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
@@ -23,7 +26,9 @@ export default function AdminLogin() {
         body: JSON.stringify({ phoneNumber, password }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (data.success) {
         // Store token and user data in localStorage
@@ -32,18 +37,21 @@ export default function AdminLogin() {
         
         // Check if user is admin (role is now in data.data)
         if (data.data.role === 'admin') {
+          console.log('Login successful, redirecting...');
           navigate('/admin/lottery');
         } else {
+          console.warn('Access denied: User is not admin', data.data.role);
           setError('Access denied. Admin privileges required.');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
       } else {
+        console.warn('Login failed:', data.message);
         setError(data.message || 'Login failed');
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-      console.error('Login error:', err);
+    } catch (err: any) {
+      console.error('Login error full:', err);
+      setError(`Login failed: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,7 @@ interface VIP {
   vipStatus: string;
   referralCode: string | null;
   referralCount: number;
-  selfieUrl?: string;
+  imageUrl?: string;
   retailReferralFormsLeft?: number;
   vipReferralFormsLeft?: number;
   activeRetailPackName?: string;
@@ -49,7 +49,9 @@ export default function VIPManagement() {
   const [vips, setVips] = useState<VIP[]>([]);
   const [vvips, setVvips] = useState<VIP[]>([]);
   const [loading, setLoading] = useState(false);
-  const [availablePacks, setAvailablePacks] = useState<any[]>([]); // Using any for simplicity or define interface
+
+  const [availablePacks, setAvailablePacks] = useState<any[]>([]); // Recharge Packs
+  const [subscriptionPackages, setSubscriptionPackages] = useState<any[]>([]); // VIP Subscription Packs
   const [selectedVIP, setSelectedVIP] = useState<VIP | null>(null);
   const [referrals, setReferrals] = useState<VIPReferral[]>([]);
   const [referralStats, setReferralStats] = useState<{ total: number; vipCount: number; vvipCount: number } | null>(null);
@@ -74,8 +76,50 @@ export default function VIPManagement() {
       expiryDate: '',
       type: 'retail' as 'retail' | 'vip',
       packName: '',
+
   });
   const [rechargeAll, setRechargeAll] = useState(false);
+
+  // Placeholder Generation
+  const [showGenerationModal, setShowGenerationModal] = useState(false); // Success Modal
+  const [showGenerationConfigModal, setShowGenerationConfigModal] = useState(false); // Config Modal
+  const [generatedVIPs, setGeneratedVIPs] = useState<{loginId: string, name: string, phoneNumber: string, defaultPassword: string}[]>([]);
+  const [selectedPackageAmount, setSelectedPackageAmount] = useState<number | null>(null);
+  const [generationCount, setGenerationCount] = useState<number>(1);
+  
+  // Filters
+  const [filterPackage, setFilterPackage] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const handleGeneratePlaceholder = async () => {
+    if (!selectedPackageAmount) {
+        setMessage({ type: 'error', text: 'Please select a package' });
+        return;
+    }
+
+    try {
+        const res = await fetch(API_ENDPOINTS.VIP.GENERATE_PLACEHOLDER, {
+             method: 'POST',
+             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+             body: JSON.stringify({ packageAmount: selectedPackageAmount, count: generationCount })
+        });
+        const data = await res.json();
+        if(data.success) {
+            setGeneratedVIPs(Array.isArray(data.data) ? data.data : [data.data]);
+            setShowGenerationConfigModal(false);
+            setShowGenerationModal(true);
+            setMessage({ type: 'success', text: 'VIPs Generated!' });
+            fetchVIPs();
+        } else {
+            setMessage({ type: 'error', text: data.message });
+        }
+    } catch(e) {
+        console.error(e);
+        setMessage({ type: 'error', text: 'Generation failed' });
+    }
+  };
 
   const handleDeactivateRecharge = async (userId?: string, userName?: string, deactivateAll: boolean = false) => {
     if (!confirm(deactivateAll ? 'WARNING: This will reset balances for ALL VIP users. Are you sure?' : `Reset balance for ${userName}?`)) return;
@@ -118,12 +162,26 @@ export default function VIPManagement() {
     } catch(e) { console.error('Failed to fetch packs', e); }
   };
 
+  const fetchSubscriptionPackages = async () => {
+      try {
+          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+          const data = await res.json();
+          if(data.success) setSubscriptionPackages(data.data);
+      } catch(e) { console.error(e); }
+  };
+
   const token = localStorage.getItem('token');
 
   const fetchVIPs = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.VIP.LIST, {
+      const params = new URLSearchParams();
+      if (filterPackage) params.append('package', filterPackage);
+      if (filterStartDate) params.append('startDate', filterStartDate);
+      if (filterEndDate) params.append('endDate', filterEndDate);
+      if (searchQuery) params.append('search', searchQuery);
+
+      const response = await fetch(`${API_ENDPOINTS.VIP.LIST}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -140,7 +198,13 @@ export default function VIPManagement() {
   const fetchVVIPs = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.VIP.VVIP_LIST, {
+      const params = new URLSearchParams();
+      if (filterPackage) params.append('package', filterPackage);
+      if (filterStartDate) params.append('startDate', filterStartDate);
+      if (filterEndDate) params.append('endDate', filterEndDate);
+      if (searchQuery) params.append('search', searchQuery);
+
+      const response = await fetch(`${API_ENDPOINTS.VIP.VVIP_LIST}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -153,6 +217,21 @@ export default function VIPManagement() {
       setLoading(false);
     }
   };
+
+  // Effect to trigger fetch when filters change
+  useEffect(() => {
+      if (activeTab === 'vip') fetchVIPs();
+      else if (activeTab === 'vvip') fetchVVIPs();
+  }, [filterPackage, filterStartDate, filterEndDate]); // Trigger upon discrete filter changes
+  
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (activeTab === 'vip') fetchVIPs();
+        else if (activeTab === 'vvip') fetchVVIPs();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchGallery = async () => {
       try {
@@ -324,18 +403,17 @@ export default function VIPManagement() {
   };
 
   useEffect(() => {
-    if (activeTab === 'vip') {
-      fetchVIPs();
-    } else if (activeTab === 'vvip') {
-      fetchVVIPs();
-    }
+    // Initial fetch handled by filter/search effects now
+    // Only fetch pack data here if needed, or rely on the other useEffect
   }, [activeTab]);
 
   useEffect(() => { // 5. Call fetchAvailablePacks on mount
     if (token) {
       fetchVIPs();
       fetchVVIPs();
+      fetchVVIPs();
       fetchAvailablePacks();
+      fetchSubscriptionPackages();
     }
   }, [token]);
 
@@ -540,6 +618,14 @@ export default function VIPManagement() {
                 Recharge
              </button>
 
+             <button
+                onClick={() => setShowGenerationConfigModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg shadow-purple-500/20 transition-all flex items-center gap-2"
+             >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Generate VIP
+             </button>
+
              <Link
                 to="/admin/lottery"
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
@@ -548,6 +634,75 @@ export default function VIPManagement() {
               </Link>
           </div>
         </div>
+
+        {/* Filters Section */}
+        {(activeTab === 'vip' || activeTab === 'vvip') && (
+            <div className="mb-8 p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-wrap gap-4 items-center animate-in fade-in slide-in-from-top-4">
+                {/* Search */}
+                <div className="flex-1 min-w-[200px]">
+                    <div className="relative">
+                        <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <input 
+                            type="text" 
+                            placeholder="Search by name or phone..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-black/20 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                        />
+                    </div>
+                </div>
+
+                {/* Package Filter */}
+                <div className="min-w-[150px]">
+                     <select 
+                        value={filterPackage}
+                        onChange={(e) => setFilterPackage(e.target.value)}
+                        className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 appearance-none"
+                     >
+                        <option value="">All Packages</option>
+                        {subscriptionPackages
+                            .filter(p => p.isVip)
+                            .map(pkg => (
+                            <option key={pkg._id} value={pkg.amount}>
+                                {pkg.name} - ₹{pkg.amount}
+                            </option>
+                        ))}
+                     </select>
+                </div>
+
+                {/* Date Range */}
+                <div className="flex items-center gap-2">
+                    <input 
+                        type="date" 
+                        value={filterStartDate}
+                        onChange={(e) => setFilterStartDate(e.target.value)}
+                        className="px-4 py-2 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                    />
+                    <span className="text-slate-500">to</span>
+                    <input 
+                        type="date" 
+                        value={filterEndDate}
+                        onChange={(e) => setFilterEndDate(e.target.value)}
+                        className="px-4 py-2 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                    />
+                </div>
+
+                {/* Clear Filters */}
+                {(filterPackage || filterStartDate || filterEndDate || searchQuery) && (
+                    <button 
+                        onClick={() => {
+                            setFilterPackage('');
+                            setFilterStartDate('');
+                            setFilterEndDate('');
+                            setSearchQuery('');
+                        }}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-xl transition-all font-medium text-sm"
+                    >
+                        Clear Filters
+                    </button>
+                )}
+            </div>
+        )}
 
         {/* Message Toast */}
         {message && (
@@ -655,7 +810,7 @@ export default function VIPManagement() {
                             <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <img
-                                src={vip.selfieUrl || '/placeholder.png'}
+                                src={vip.imageUrl || '/placeholder.png'}
                                 alt={vip.name}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50"
                                 />
@@ -1051,13 +1206,13 @@ export default function VIPManagement() {
                             <label className="block text-sm font-bold text-slate-400 mb-1">Select Referral Pack</label>
                             <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2">
                                 {availablePacks.filter(p => p.type === rechargeData.type).map(pack => (
-                                    <label key={pack._id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${rechargeData.referralForms === pack.count.toString() ? 'bg-yellow-500/10 border-yellow-500' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                                    <label key={pack._id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${rechargeData.packName === pack.name ? 'bg-yellow-500/10 border-yellow-500' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
                                         <div className="flex items-center gap-3">
                                             <input 
                                                 type="radio" 
                                                 name="pack" 
                                                 value={pack.count}
-                                                checked={rechargeData.referralForms === pack.count.toString()}
+                                                checked={rechargeData.packName === pack.name}
                                                 onChange={() => setRechargeData({...rechargeData, referralForms: pack.count.toString(), packName: pack.name})}
                                                 className="text-yellow-500 focus:ring-yellow-500"
                                             />
@@ -1092,6 +1247,169 @@ export default function VIPManagement() {
             </div>
         )}
       </div>
+
+
+      {/* Generation Config Modal */}
+      {showGenerationConfigModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4">
+            <div className="bg-[#1e293b] border border-purple-500/30 rounded-3xl max-w-md w-full p-8 relative animate-in zoom-in-95">
+                 <button 
+                    onClick={() => setShowGenerationConfigModal(false)}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+
+                <h2 className="text-2xl font-black text-white mb-2">Generate New VIP</h2>
+                <p className="text-slate-400 mb-6 text-sm">Select a package to generate a placeholder account.</p>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-bold text-slate-400 mb-2">Number of VIPs to Generate</label>
+                    <input 
+                        type="number" 
+                        min="1" 
+                        max="50" 
+                        value={generationCount} 
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (val > 50) setGenerationCount(50);
+                            else if (val < 1) setGenerationCount(1);
+                            else setGenerationCount(val);
+                        }}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:outline-none focus:border-purple-500 transition-all"
+                        placeholder="Enter number of VIPs (1-50)"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">Max 50 at a time</p>
+                </div>
+
+                <div className="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2">
+                    {subscriptionPackages.filter(p => p.isVip).length === 0 ? (
+                        <div className="text-center py-8 bg-black/20 rounded-xl border border-white/5">
+                            <p className="text-slate-500 text-sm">No VIP Packages Found</p>
+                            <button onClick={() => { setShowGenerationConfigModal(false); setActiveTab('packages'); }} className="text-purple-400 text-xs font-bold mt-2 hover:underline">Manage Packages</button>
+                        </div>
+                    ) : (
+                        subscriptionPackages.filter(p => p.isVip).map(pkg => (
+                            <label key={pkg._id} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedPackageAmount === pkg.amount ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/10' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                                <div className="flex items-center gap-3">
+                                    <input 
+                                        type="radio" 
+                                        name="vipPackage"
+                                        checked={selectedPackageAmount === pkg.amount}
+                                        onChange={() => setSelectedPackageAmount(pkg.amount)}
+                                        className="h-5 w-5 text-purple-500 border-gray-300 focus:ring-purple-500"
+                                    />
+                                    <div>
+                                        <p className="font-bold text-white text-lg">{pkg.name}</p>
+                                        <div className="flex gap-2 text-xs text-slate-300 mt-0.5">
+                                            {pkg.whatsappGroupLink && <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">WhatsApp</span>}
+                                            {pkg.description && <span>{pkg.description}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="font-mono text-purple-400 font-black text-lg">₹{pkg.amount}</span>
+                            </label>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => setShowGenerationConfigModal(false)}
+                        className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-slate-300 font-bold rounded-xl transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleGeneratePlaceholder}
+                        disabled={!selectedPackageAmount}
+                        className={`flex-1 py-3 font-bold rounded-xl transition-all shadow-lg ${
+                            !selectedPackageAmount 
+                            ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
+                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
+                        }`}
+                    >
+                        Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Generated VIP Modal */}
+      {showGenerationModal && generatedVIPs.length > 0 && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4 backdrop-blur-sm">
+            <div className="bg-[#1e293b] border border-white/10 rounded-3xl max-w-2xl w-full p-8 text-center animate-in zoom-in-95 relative max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+                {/* Background decoration */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-purple-500/10 to-transparent pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col h-full">
+                    <button 
+                        onClick={() => { setShowGenerationModal(false); setGeneratedVIPs([]); }}
+                        className="absolute top-0 right-0 p-2 text-slate-400 hover:text-white z-20"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    
+                    <div className="w-20 h-20 mx-auto mb-4 relative shrink-0">
+                        <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl animate-pulse"></div>
+                        <img src="/imgs/congratulations.png" alt="Success" className="w-full h-full object-contain relative z-10" />
+                    </div>
+                    
+                    <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Generation Successful!</h2>
+                    <p className="text-slate-400 mb-6 text-sm">
+                        {generatedVIPs.length} new VIP accounts created. Share these details with the users.
+                    </p>
+                    
+                    <div className="overflow-y-auto flex-1 pr-2 space-y-3 mb-6 min-h-0 custom-scrollbar">
+                        {generatedVIPs.map((vip, index) => (
+                            <div key={index} className="bg-black/30 rounded-xl p-4 border border-white/10 text-left grid grid-cols-1 sm:grid-cols-2 gap-4 hover:bg-black/40 transition-colors group">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Login ID</p>
+                                    <div className="flex items-center gap-2">
+                                         <span className="text-lg font-mono font-black text-purple-400 tracking-wider">{vip.loginId}</span>
+                                         <button 
+                                            onClick={() => { navigator.clipboard.writeText(vip.loginId); setMessage({type:'success', text:'Copied!'}); }} 
+                                            className="text-slate-600 hover:text-white transition-colors p-1"
+                                            title="Copy ID"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Password</p>
+                                     <div className="flex items-center gap-2">
+                                        <span className="text-sm font-mono text-white font-bold bg-white/5 px-2 py-1 rounded">{vip.defaultPassword}</span>
+                                        <span className="text-xs text-slate-500 italic ml-auto">{vip.name}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                     <div className="flex gap-3 shrink-0 mt-auto">
+                         <button 
+                            onClick={() => {
+                                const text = generatedVIPs.map(v => `Login ID: ${v.loginId}\nPassword: ${v.defaultPassword}\nName: ${v.name}\n-------------------`).join('\n');
+                                navigator.clipboard.writeText(text);
+                                setMessage({type:'success', text:'All details copied!'});
+                            }}
+                            className="flex-1 py-3 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 font-bold rounded-xl transition-all border border-purple-500/30 shadow-lg shadow-purple-500/10"
+                        >
+                            Copy All Details
+                        </button>
+                        <button 
+                            onClick={() => { setShowGenerationModal(false); setGeneratedVIPs([]); }}
+                            className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all"
+                        >
+                            Done
+                        </button>
+                     </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 }

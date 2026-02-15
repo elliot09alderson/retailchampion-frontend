@@ -28,6 +28,7 @@ interface VIPUser {
   bankName?: string;
   bankAccountNumber?: string;
   ifscCode?: string;
+  imageUrl?: string;
 }
 
 interface Referral {
@@ -43,6 +44,7 @@ interface ReferralStats {
   total: number;
   vipCount: number;
   vvipCount: number;
+  target?: number;
 }
 
 interface GalleryItem {
@@ -91,17 +93,29 @@ export default function VIPProfile() {
       idNumber: '',
       billImage: null
   });
+  const [isRegistering, setIsRegistering] = useState(false);
   const [registeredUserCode, setRegisteredUserCode] = useState<string | null>(null);
   
   // KYC Modal State
   const [showKYCModal, setShowKYCModal] = useState(false);
-  const [kycData, setKycData] = useState({
+  const [kycData, setKycData] = useState<{
+    name: string;
+    aadhaarNumber: string;
+    panNumber: string;
+    bankName: string;
+    bankAccountNumber: string;
+    ifscCode: string;
+    phoneNumber: string;
+    image: File | null;
+  }>({
+    name: '',
     aadhaarNumber: '',
     panNumber: '',
     bankName: '',
     bankAccountNumber: '',
     ifscCode: '',
-    phoneNumber: ''
+    phoneNumber: '',
+    image: null
   });
 
   useEffect(() => {
@@ -157,12 +171,14 @@ export default function VIPProfile() {
       if (data.success) {
         setUser(data.data.user);
         setKycData({
+            name: data.data.user.name || '',
             aadhaarNumber: data.data.user.aadhaarNumber || '',
             panNumber: data.data.user.panNumber || '',
             bankName: data.data.user.bankName || '',
             bankAccountNumber: data.data.user.bankAccountNumber || '',
             ifscCode: data.data.user.ifscCode || '',
-            phoneNumber: data.data.user.phoneNumber || ''
+            phoneNumber: data.data.user.phoneNumber || '',
+            image: null
         });
         setReferrals(data.data.referrals || []);
         setStats(data.data.referralStats || { total: 0, vipCount: 0, vvipCount: 0 });
@@ -195,17 +211,28 @@ export default function VIPProfile() {
     e.preventDefault();
     try {
         const token = localStorage.getItem('vip_token');
+        const formData = new FormData();
+        formData.append('name', kycData.name);
+        formData.append('phoneNumber', kycData.phoneNumber);
+        formData.append('aadhaarNumber', kycData.aadhaarNumber);
+        formData.append('panNumber', kycData.panNumber);
+        formData.append('bankName', kycData.bankName);
+        formData.append('bankAccountNumber', kycData.bankAccountNumber);
+        formData.append('ifscCode', kycData.ifscCode);
+        if (kycData.image) {
+            formData.append('image', kycData.image);
+        }
+
         const res = await fetch(API_ENDPOINTS.VIP.PROFILE, {
              method: 'PUT',
              headers: { 
-                'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}` 
              },
-             body: JSON.stringify(kycData)
+             body: formData
         });
         const data = await res.json();
         if(data.success) {
-            toast.success('KYC Details updated successfully');
+            toast.success('Profile updated successfully');
             setShowKYCModal(false);
             fetchProfile();
         } else {
@@ -218,7 +245,10 @@ export default function VIPProfile() {
 
   const handleRegisterReferral = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isRegistering) return;
+
     try {
+        setIsRegistering(true);
         const token = localStorage.getItem('vip_token');
         const formData = new FormData();
         formData.append('name', registerData.name);
@@ -257,6 +287,8 @@ export default function VIPProfile() {
         }
     } catch(e) {
         toast.error('Registration failed');
+    } finally {
+        setIsRegistering(false);
     }
   };
 
@@ -272,7 +304,12 @@ export default function VIPProfile() {
     return null;
   }
 
-  const getPackageName = (amount: number) => {
+  const getPackageName = (user: VIPUser) => {
+    if (user.activeVipPackName) return user.activeVipPackName;
+    const pkg = packages.find(p => p.amount === user.package);
+    if (pkg) return pkg.name;
+
+    const amount = user.package;
     if (amount === 999 || amount === 1000) return 'Basic';
     if (amount === 4500) return 'Advance';
     if (amount >= 8000) return 'Premium';
@@ -362,7 +399,7 @@ export default function VIPProfile() {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Package</label>
-                <p className="text-white text-lg font-bold">{getPackageName(user.package)}</p>
+                <p className="text-white text-lg font-bold">{getPackageName(user)}</p>
               </div>
             </div>
             <div className="space-y-4">
@@ -816,14 +853,14 @@ export default function VIPProfile() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-white font-bold">VVIP Progress</h3>
-                <p className="text-purple-300 text-sm">Refer 10 VIPs to become VVIP</p>
+                <p className="text-purple-300 text-sm">Refer {stats.target || 10} VIPs to become VVIP</p>
               </div>
-              <span className="text-purple-400 font-black text-2xl">{stats.vipCount}/10</span>
+              <span className="text-purple-400 font-black text-2xl">{stats.vipCount}/{stats.target || 10}</span>
             </div>
             <div className="h-3 bg-white/10 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min((stats.vipCount / 10) * 100, 100)}%` }}
+                style={{ width: `${Math.min((stats.vipCount / (stats.target || 10)) * 100, 100)}%` }}
               ></div>
             </div>
           </div>
@@ -1023,19 +1060,29 @@ export default function VIPProfile() {
                     <div className="pt-2">
                         <button 
                             type="submit" 
-                            disabled={(registerFormType === 'vip' ? user?.vipReferralFormsLeft : user?.retailReferralFormsLeft) as number <= 0}
+                            disabled={isRegistering || (registerFormType === 'vip' ? user?.vipReferralFormsLeft : user?.retailReferralFormsLeft) as number <= 0}
                             className={`w-full py-4 font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 group ${
                                 (registerFormType === 'vip' ? (user?.vipReferralFormsLeft || 0) : (user?.retailReferralFormsLeft || 0)) <= 0 
                                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed border border-white/5'
-                                    : registerFormType === 'vip'
-                                        ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black shadow-yellow-500/25 hover:shadow-yellow-500/40'
-                                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                                    : isRegistering
+                                        ? 'bg-slate-600 text-slate-300 cursor-wait'
+                                        : registerFormType === 'vip'
+                                            ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black shadow-yellow-500/25 hover:shadow-yellow-500/40'
+                                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40'
                             }`}
                         >
                             {(registerFormType === 'vip' ? (user?.vipReferralFormsLeft || 0) : (user?.retailReferralFormsLeft || 0)) <= 0 ? (
                                 <>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                     No Forms Left
+                                </>
+                            ) : isRegistering ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Registering...
                                 </>
                             ) : (
                                 <>
@@ -1072,7 +1119,54 @@ export default function VIPProfile() {
             </div>
             
             <form onSubmit={handleUpdateKYC} className="p-6 md:p-8 space-y-6">
+                
+                {/* Profile Image (New) */}
+                <div className="flex justify-center mb-2">
+                    <label className="relative group cursor-pointer">
+                        <div className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 border-dashed border-white/20 transition-all ${kycData.image ? 'border-purple-500' : 'bg-white/5'}`}>
+                            {kycData.image ? (
+                                <img 
+                                    src={URL.createObjectURL(kycData.image)} 
+                                    alt="Preview" 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : user?.imageUrl ? (
+                                <img 
+                                    src={user.imageUrl} 
+                                    alt="Current" 
+                                    className="w-full h-full object-cover"
+                                />
+                             ) : (
+                                <div className="text-center">
+                                    <svg className="w-8 h-8 mx-auto mb-1 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    <span className="text-[10px] uppercase font-bold text-slate-500">Edit Photo</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setKycData({...kycData, image: e.target.files ? e.target.files[0] : null})}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Name Input (New) */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Full Name</label>
+                        <input
+                            type="text"
+                            value={kycData.name}
+                            onChange={(e) => setKycData({...kycData, name: e.target.value})}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-purple-500 transition-all"
+                            placeholder="Full Name"
+                        />
+                    </div>
                     {/* Phone Number */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Phone Number</label>
@@ -1167,31 +1261,48 @@ export default function VIPProfile() {
       )}
 
       {/* Success Modal */}
+      {/* Success Modal */}
       {registeredUserCode && (
-           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
-                <div className="bg-[#1e293b] border border-emerald-500/30 rounded-3xl max-w-sm w-full p-8 text-center animate-in zoom-in-95">
-                    <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <h2 className="text-2xl font-black text-white mb-2">Registration Successful!</h2>
-                    <p className="text-slate-400 mb-6">The new member has been registered. Share this login code with them.</p>
-                    
-                    <div className="bg-black/30 rounded-xl p-4 mb-6 border border-white/10">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Login Code</p>
-                        <div className="flex items-center justify-center gap-2">
-                             <span className="text-2xl font-mono font-black text-emerald-400">{registeredUserCode}</span>
-                             <button onClick={() => copyToClipboard(registeredUserCode)} className="text-slate-400 hover:text-white">
-                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                             </button>
+           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+                <div className="bg-[#1e293b] border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 shadow-2xl relative overflow-hidden">
+                    {/* Background decoration */}
+                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none"></div>
+
+                    <div className="relative z-10">
+                        <div className="w-24 h-24 mx-auto mb-6 relative">
+                            <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse"></div>
+                            <img src="/imgs/congratulations.png" alt="Success" className="w-full h-full object-contain relative z-10" />
                         </div>
+                        
+                        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Registration Successful!</h2>
+                        <p className="text-slate-400 mb-8 text-sm leading-relaxed">
+                            Welcome to Retail Champions! The new member has been successfully registered.
+                        </p>
+                        
+                        <div className="bg-black/40 rounded-2xl p-6 mb-8 border border-white/5 relative group">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                                {registerFormType === 'vip' ? 'Member Login Code' : 'Participation Code'}
+                            </p>
+                            <div className="flex items-center justify-center gap-3">
+                                 <span className="text-3xl font-mono font-black text-emerald-400 tracking-wider drop-shadow-lg">{registeredUserCode}</span>
+                                 <button 
+                                    onClick={() => { copyToClipboard(registeredUserCode); toast.success('Copied!'); }} 
+                                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                                    title="Copy Code"
+                                 >
+                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                 </button>
+                            </div>
+                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-50"></div>
+                        </div>
+                        
+                        <button 
+                            onClick={() => setRegisteredUserCode(null)}
+                            className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:-translate-y-0.5"
+                        >
+                            Done
+                        </button>
                     </div>
-                    
-                    <button 
-                        onClick={() => setRegisteredUserCode(null)}
-                        className="w-full py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all"
-                    >
-                        Close
-                    </button>
                 </div>
            </div>
       )}
