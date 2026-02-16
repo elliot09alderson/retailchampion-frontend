@@ -9,9 +9,14 @@ interface RechargePack {
     price: number;
     type: 'retail' | 'vip';
     isActive: boolean;
+    referralTarget?: number;
 }
 
-export default function RechargePacksManagement() {
+interface Props {
+    onPackChange?: () => void;
+}
+
+export default function RechargePacksManagement({ onPackChange }: Props) {
     const [activeView, setActiveView] = useState<'retail' | 'vip'>('retail');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [packs, setPacks] = useState<RechargePack[]>([]);
@@ -21,7 +26,8 @@ export default function RechargePacksManagement() {
         name: '',
         count: '',
         price: '',
-        type: 'retail' as 'retail' | 'vip'
+        type: 'retail' as 'retail' | 'vip',
+        referralTarget: '10'
     });
 
     useEffect(() => {
@@ -59,6 +65,7 @@ export default function RechargePacksManagement() {
             if (data.success) {
                 toast.success('Pack deleted');
                 fetchPacks();
+                if (onPackChange) onPackChange();
             } else {
                 toast.error(data.message);
             }
@@ -73,14 +80,15 @@ export default function RechargePacksManagement() {
             name: pack.name,
             count: pack.count.toString(),
             price: pack.price.toString(),
-            type: pack.type
+            type: pack.type,
+            referralTarget: (pack.referralTarget || 10).toString()
         });
         setShowModal(true);
     };
 
     const openCreateModal = () => {
         setEditingId(null);
-        setFormData({ name: '', count: '', price: '', type: activeView });
+        setFormData({ name: '', count: '', price: '', type: activeView, referralTarget: '10' });
         setShowModal(true);
     };
 
@@ -107,8 +115,9 @@ export default function RechargePacksManagement() {
                 toast.success(editingId ? 'Pack updated' : 'Pack created successfully');
                 setShowModal(false);
                 setEditingId(null);
-                setFormData({ name: '', count: '', price: '', type: activeView });
+                setFormData({ name: '', count: '', price: '', type: activeView, referralTarget: '10' });
                 fetchPacks();
+                if (onPackChange) onPackChange();
             } else {
                 toast.error(data.message);
             }
@@ -133,7 +142,7 @@ export default function RechargePacksManagement() {
                         onClick={() => setActiveView('vip')}
                         className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${activeView === 'vip' ? 'bg-yellow-500 text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
                     >
-                        VIP Packs
+                        Training Form Packs
                     </button>
                 </div>
                 <button 
@@ -183,6 +192,11 @@ export default function RechargePacksManagement() {
                                 <p className={`text-2xl font-black ${pack.type === 'vip' ? 'text-yellow-400' : 'text-emerald-400'}`}>
                                     {pack.count}
                                 </p>
+                                {pack.referralTarget && (
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                                        Target: {pack.referralTarget}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -234,6 +248,18 @@ export default function RechargePacksManagement() {
                                         placeholder="10"
                                     />
                                 </div>
+                                </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-400 mb-1">VVIP Target <span className="text-xs font-normal text-slate-500">(Referrals needed for VVIP)</span></label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    value={formData.referralTarget}
+                                    onChange={e => setFormData({...formData, referralTarget: e.target.value})}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20"
+                                    placeholder="10"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-400 mb-1">Pack Type</label>

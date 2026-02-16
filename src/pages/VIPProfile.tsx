@@ -460,7 +460,7 @@ export default function VIPProfile() {
                  <div>
                      <p className="text-2xl font-black text-yellow-400">{user.vipReferralFormsLeft || 0}</p>
                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                        VIP Forms
+                        Training Forms
                         {user.activeVipPackName ? (
                             <span className="block text-yellow-500 normal-case mt-0.5">{user.activeVipPackName}</span>
                         ) : (
@@ -496,7 +496,7 @@ export default function VIPProfile() {
                     }`}
                 >
                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
-                     VIP Form
+                     Training Form
                 </button>
              </div>
         </div>
@@ -1021,9 +1021,9 @@ export default function VIPProfile() {
                                     style={{ backgroundImage: 'none' }}
                                 >
                                     <option value="" className="bg-[#1e293b]">Select Retail Package</option>
-                                    {packages.filter(pkg => !pkg.isVip).map(pkg => (
+                                    {packages.filter(pkg => !pkg.isVip && pkg.isActive).map(pkg => (
                                         <option key={pkg._id} value={pkg.amount} className="bg-[#1e293b]">
-                                            ₹{pkg.amount.toLocaleString()} — {pkg.name}
+                                            {pkg.name}
                                         </option>
                                     ))}
                                 </select>
@@ -1045,10 +1045,12 @@ export default function VIPProfile() {
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white focus:border-white/30 focus:bg-white/5 focus:outline-none appearance-none transition-all cursor-pointer"
                                     style={{ backgroundImage: 'none' }}
                                 >
-                                    <option value="" className="bg-[#1e293b]">Select Package Amount</option>
-                                    <option value="1000" className="bg-[#1e293b]">Basic (₹1,000)</option>
-                                    <option value="4500" className="bg-[#1e293b]">Advance (₹4,500)</option>
-                                    <option value="8000" className="bg-[#1e293b]">Premium (₹8,000)</option>
+                                    <option value="" className="bg-[#1e293b]">Select Package</option>
+                                    {packages.filter(pkg => pkg.isVip && pkg.isActive).map(pkg => (
+                                        <option key={pkg._id} value={pkg.amount} className="bg-[#1e293b]">
+                                            {pkg.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                                     <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

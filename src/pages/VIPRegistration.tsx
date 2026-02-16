@@ -234,7 +234,7 @@ export default function VIPRegistrationForm() {
                                     <Field type="radio" name="package" value={pkg.amount.toString()} className="w-4 h-4 text-amber-600" />
                                     <div>
                                       <p className="font-bold text-slate-800">{pkg.name}</p>
-                                      <p className="text-amber-600 font-mono font-black">₹{pkg.amount}</p>
+                                      {/* <p className="text-amber-600 font-mono font-black">₹{pkg.amount}</p> */}
                                     </div>
                                   </div>
                                 </label>

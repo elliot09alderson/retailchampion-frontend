@@ -363,7 +363,7 @@ export default function RegistrationForm() {
                           <option value="">Select a package...</option>
                           {availablePackages.filter(pkg => !pkg.isVip).map((pkg) => (
                             <option key={pkg._id} value={pkg.amount}>
-                              ₹{pkg.amount.toLocaleString()} — {pkg.name}
+                              {pkg.name}
                             </option>
                           ))}
                         </select>

@@ -245,6 +245,10 @@ export default function VIPManagement() {
       if(showGalleryModal) fetchGallery();
   }, [showGalleryModal]);
 
+  useEffect(() => {
+      if(showRechargeModal) fetchAvailablePacks();
+  }, [showRechargeModal]);
+
   const generateReferralCode = async (vipId: string) => {
     try {
       const response = await fetch(API_ENDPOINTS.VIP.GENERATE_REFERRAL(vipId), {
@@ -410,7 +414,6 @@ export default function VIPManagement() {
   useEffect(() => { // 5. Call fetchAvailablePacks on mount
     if (token) {
       fetchVIPs();
-      fetchVVIPs();
       fetchVVIPs();
       fetchAvailablePacks();
       fetchSubscriptionPackages();
@@ -762,8 +765,8 @@ export default function VIPManagement() {
         {/* Content Area */}
         {activeTab === 'packages' ? (
              <PackagesManagement mode="vip" />
-        ) : activeTab === 'recharge-packs' ? ( // 6. Render RechargePacksManagement
-             <RechargePacksManagement />
+        ) : activeTab === 'recharge-packs' ? (
+             <RechargePacksManagement onPackChange={fetchAvailablePacks} />
         ) : (
              <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                 {loading ? (
@@ -1192,7 +1195,7 @@ export default function VIPManagement() {
                                      className={`flex-1 py-3 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 ${rechargeData.type === 'vip' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
                                  >
                                      <span className="w-2 h-2 rounded-full bg-current"></span>
-                                     VIP Forms
+                                     Training Forms
                                  </button>
                              </div>
                              {(selectedRechargeUser && !rechargeAll) && (
