@@ -7,6 +7,7 @@ import PackagesManagement from '../components/PackagesManagement';
 import PinManagement from '../components/PinManagement';
 import ContestHistory from '../components/ContestHistory';
 import ContestCreation from '../components/ContestCreation';
+import AdminReferralCard from '../components/AdminReferralCard';
 
 interface Contest {
   _id: string;
@@ -180,7 +181,7 @@ export default function AdminLottery() {
                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
                              <div className="flex-1 min-w-0">
                                  <p className="text-sm font-bold truncate">{user.name || 'Admin'}</p>
-                                 <p className="text-[10px] text-slate-500 truncate">Super Admin</p>
+                                 <p className="text-[10px] text-slate-500 truncate">Admin</p>
                              </div>
                         </div>
                         <button
@@ -248,7 +249,12 @@ export default function AdminLottery() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
+                                {/* Admin Referral Code & QR */}
+                                {user.adminReferralCode && (
+                                    <AdminReferralCard referralCode={user.adminReferralCode} />
+                                )}
+
                                 {/* Contests Grouped by Package */}
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">

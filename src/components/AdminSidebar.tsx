@@ -113,7 +113,7 @@ export default function AdminSidebar({ activeView, onNavigate, user = { name: 'A
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate text-white">{user.name || 'Admin'}</p>
-                        <p className="text-[10px] text-slate-500 truncate">Super Admin</p>
+                        <p className="text-[10px] text-slate-500 truncate">Admin</p>
                     </div>
               </div>
               <button

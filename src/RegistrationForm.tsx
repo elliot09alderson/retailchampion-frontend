@@ -6,8 +6,9 @@ import * as Yup from 'yup';
 import { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from './config/api';
 
-// Validation schema
-const registrationSchema = Yup.object().shape({
+// Validation schema factory — PIN requirement depends on whether the user
+// arrived via an admin QR scan (adminRef set) or not.
+const buildRegistrationSchema = (hasAdminRef: boolean) => Yup.object().shape({
   name: Yup.string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must be less than 50 characters')
@@ -30,8 +31,9 @@ const registrationSchema = Yup.object().shape({
     .transform((value) => value === '' ? null : value),
   package: Yup.number()
     .required('Package selection is required'),
-  pin: Yup.string()
-    .required('Package PIN is required'),
+  pin: hasAdminRef
+    ? Yup.string().optional().nullable()
+    : Yup.string().required('Package PIN is required'),
   referralCode: Yup.string()
     .optional()
     .nullable()
@@ -87,6 +89,26 @@ export default function RegistrationForm() {
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [availablePackages, setAvailablePackages] = useState<Package[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
+  const [adminRef, setAdminRef] = useState<string | null>(null);
+  const [adminOrgName, setAdminOrgName] = useState<string | null>(null);
+
+  // Read admin referral code from URL query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setAdminRef(ref);
+      // Resolve admin org name
+      fetch(API_ENDPOINTS.ADMIN_REFERRAL.RESOLVE(ref))
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setAdminOrgName(data.data.organizationName);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Fetch available packages
   useEffect(() => {
@@ -151,10 +173,10 @@ export default function RegistrationForm() {
       
       // Check if VIP package is selected
       const isVipPackage = availablePackages.find(pkg => pkg.isVip && values.package === pkg.amount);
-      
-      
-      // PIN is always required now
-      if (!values.pin) {
+
+      // PIN is required only when not registering via an admin QR scan.
+      // QR scans authorize the registration via the admin's referral code.
+      if (!adminRef && !values.pin) {
         setErrors({ pin: 'PIN is required' });
         toast.error('Please enter the package PIN');
         setSubmitting(false);
@@ -182,8 +204,15 @@ export default function RegistrationForm() {
         formData.append('isVipRegistration', 'true');
       }
       
-      // Always append PIN
-      formData.append('pin', values.pin);
+      // Append PIN only when not registering via QR scan
+      if (!adminRef && values.pin) {
+        formData.append('pin', values.pin);
+      }
+
+      // Append admin referral code from QR scan if present
+      if (adminRef) {
+        formData.append('adminRef', adminRef);
+      }
       
       if (values.userImage) {
         formData.append('image', values.userImage);
@@ -250,11 +279,22 @@ export default function RegistrationForm() {
 
         </div>
 
+        {/* Admin Organization Banner (from QR scan) */}
+        {adminOrgName && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 flex items-center gap-3">
+            <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <p className="text-blue-800 text-sm font-semibold">Registering under: <span className="text-blue-600">{adminOrgName}</span></p>
+          </div>
+        )}
+
         {/* Form Container */}
         <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] p-8 md:p-12">
           <Formik
             initialValues={initialValues}
-            validationSchema={registrationSchema}
+            validationSchema={buildRegistrationSchema(!!adminRef)}
+            enableReinitialize
             onSubmit={handleSubmit}
           >
             {({ setFieldValue, isSubmitting, errors, touched, values }) => (
@@ -380,11 +420,12 @@ export default function RegistrationForm() {
                   <ErrorMessage name="package" component="div" className="text-[#ef4444] text-xs font-normal" />
                 </div>
 
-                {/* PIN Field - Always Visible */}
-                <div className="space-y-2">
-                  <label htmlFor="pin" className="block text-sm font-medium text-[#334155]">
-                    Retail PIN <span className="text-[#ef4444]">*</span>
-                  </label>
+                {/* PIN Field - Hidden when registering via admin QR scan */}
+                {!adminRef && (
+                  <div className="space-y-2">
+                    <label htmlFor="pin" className="block text-sm font-medium text-[#334155]">
+                      Retail PIN <span className="text-[#ef4444]">*</span>
+                    </label>
                     <Field
                       type="text"
                       id="pin"
@@ -402,6 +443,7 @@ export default function RegistrationForm() {
                       className="text-[#ef4444] text-xs font-normal"
                     />
                   </div>
+                )}
 
                 {/* Phone Number Field */}
                 <div className="space-y-2">

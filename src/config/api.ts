@@ -88,5 +88,16 @@ export const API_ENDPOINTS = {
       UPDATE: (id: string) => `${API_BASE_URL}/api/recharge-packs/${id}`,
       DELETE: (id: string) => `${API_BASE_URL}/api/recharge-packs/${id}`,
   },
+  ADMIN_REFERRAL: {
+      RESOLVE: (code: string) => `${API_BASE_URL}/api/admin-referral/${code}`,
+  },
+  SUPERADMIN: {
+      STATS: `${API_BASE_URL}/api/superadmin/stats`,
+      ADMINS: `${API_BASE_URL}/api/superadmin/admins`,
+      REGISTER_ADMIN: `${API_BASE_URL}/api/superadmin/admins`,
+      GET_ADMIN: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}`,
+      UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}/status`,
+      DELETE_ADMIN: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}`,
+  },
 };
 

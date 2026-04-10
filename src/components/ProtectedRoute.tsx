@@ -16,7 +16,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Check if user is admin
   try {
     const user = JSON.parse(userStr);
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
       return <Navigate to="/admin/login" replace />;
     }
   } catch (error) {

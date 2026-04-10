@@ -12,7 +12,10 @@ import VIPManagement from './pages/VIPManagement';
 import VIPLogin from './pages/VIPLogin';
 import VIPProfile from './pages/VIPProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import SuperAdminProtectedRoute from './components/SuperAdminProtectedRoute';
 import VIPRegistration from './pages/VIPRegistration';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 function App() {
   return (
@@ -49,6 +52,18 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        {/* Super Admin Routes */}
+        <Route path="/superadmin" element={<Navigate to="/superadmin/dashboard" replace />} />
+        <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+        <Route
+          path="/superadmin/dashboard"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminDashboard />
+            </SuperAdminProtectedRoute>
+          }
+        />
+
         {/* VIP Routes */}
         <Route path="/vip/login" element={<VIPLogin />} />
         <Route path="/vip/profile" element={<VIPProfile />} />
