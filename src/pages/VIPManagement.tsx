@@ -164,7 +164,10 @@ export default function VIPManagement() {
 
   const fetchSubscriptionPackages = async () => {
       try {
-          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+          const token = localStorage.getItem('token');
+          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
           const data = await res.json();
           if(data.success) setSubscriptionPackages(data.data);
       } catch(e) { console.error(e); }
@@ -235,7 +238,10 @@ export default function VIPManagement() {
 
   const fetchGallery = async () => {
       try {
-          const res = await fetch(API_ENDPOINTS.GALLERY.LIST);
+          const token = localStorage.getItem('token');
+          const res = await fetch(API_ENDPOINTS.GALLERY.LIST, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
           const data = await res.json();
           if(data.success) setGalleryItems(data.data);
       } catch(e) { console.error(e); }

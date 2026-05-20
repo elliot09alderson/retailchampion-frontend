@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SuperAdminSidebar from '../components/SuperAdminSidebar';
 import AdminManagement from '../components/AdminManagement';
 import AdminRegistrationForm from '../components/AdminRegistrationForm';
@@ -12,6 +13,7 @@ interface DashboardStats {
 }
 
 export default function SuperAdminDashboard() {
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState('dashboard');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const token = localStorage.getItem('token');
@@ -111,6 +113,32 @@ export default function SuperAdminDashboard() {
                   <div className="text-left">
                     <p className="text-white font-bold">Manage Admins</p>
                     <p className="text-slate-400 text-sm">View, activate/deactivate admins</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/products')}
+                  className="flex items-center gap-4 p-5 bg-white/5 border border-yellow-500/20 rounded-2xl hover:bg-yellow-500/5 transition-colors group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-yellow-600/20 flex items-center justify-center group-hover:bg-yellow-600/30 transition-colors">
+                    <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-yellow-200 font-bold">Manage Products</p>
+                    <p className="text-slate-400 text-sm">Add exclusive VIP products</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/orders')}
+                  className="flex items-center gap-4 p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/[0.07] transition-colors group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-green-600/20 flex items-center justify-center group-hover:bg-green-600/30 transition-colors">
+                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-bold">View Orders</p>
+                    <p className="text-slate-400 text-sm">Track and manage product orders</p>
                   </div>
                 </button>
               </div>

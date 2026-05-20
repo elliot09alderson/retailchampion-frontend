@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_BASE_URL}/api/auth/login`,
     ME: `${API_BASE_URL}/api/auth/me`,
+    UPDATE_PROFILE: `${API_BASE_URL}/api/auth/profile`,
   },
   LOTTERY: {
     CREATE: `${API_BASE_URL}/api/lottery/create`,
@@ -91,12 +92,26 @@ export const API_ENDPOINTS = {
   ADMIN_REFERRAL: {
       RESOLVE: (code: string) => `${API_BASE_URL}/api/admin-referral/${code}`,
   },
+  PRODUCTS: {
+    LIST_VIP: `${API_BASE_URL}/api/products/vip`,
+    GET_VIP: (id: string) => `${API_BASE_URL}/api/products/vip/${id}`,
+    LIST_ADMIN: `${API_BASE_URL}/api/products`,
+    CREATE: `${API_BASE_URL}/api/products`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/products/${id}`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/products/${id}`,
+  },
+  ORDERS: {
+    CREATE: `${API_BASE_URL}/api/orders`,
+    LIST: `${API_BASE_URL}/api/orders`,
+    UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/orders/${id}/status`,
+  },
   SUPERADMIN: {
       STATS: `${API_BASE_URL}/api/superadmin/stats`,
       ADMINS: `${API_BASE_URL}/api/superadmin/admins`,
       REGISTER_ADMIN: `${API_BASE_URL}/api/superadmin/admins`,
       GET_ADMIN: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}`,
       UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}/status`,
+      RESET_PASSWORD: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}/password`,
       DELETE_ADMIN: (id: string) => `${API_BASE_URL}/api/superadmin/admins/${id}`,
   },
 };

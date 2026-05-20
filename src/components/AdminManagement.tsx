@@ -22,6 +22,9 @@ export default function AdminManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const token = localStorage.getItem('token');
 
@@ -97,6 +100,35 @@ export default function AdminManagement() {
     setDeleteConfirm(null);
     setDeletePassword('');
     setDeleteLoading(false);
+  };
+
+  const handleResetPassword = async (id: string) => {
+    if (!newPassword.trim() || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.SUPERADMIN.RESET_PASSWORD(id), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Password reset successfully');
+        setResetPasswordId(null);
+        setNewPassword('');
+      } else {
+        toast.error(data.message);
+      }
+    } catch {
+      toast.error('Failed to reset password');
+    }
+    setResetLoading(false);
   };
 
   const filtered = admins.filter(a =>
@@ -204,7 +236,7 @@ export default function AdminManagement() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
+                  <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-white/5">
                     <button
                       onClick={() => toggleStatus(admin._id, admin.status)}
                       className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
@@ -215,6 +247,41 @@ export default function AdminManagement() {
                     >
                       {admin.status === 'active' ? 'Deactivate' : 'Activate'}
                     </button>
+
+                    {resetPasswordId === admin._id ? (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+                        <span className="text-blue-400 text-xs font-bold">New password:</span>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Min 6 chars"
+                          className="px-3 py-1.5 rounded-lg bg-white/5 border border-blue-500/30 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-36"
+                          onKeyDown={(e) => e.key === 'Enter' && handleResetPassword(admin._id)}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleResetPassword(admin._id)}
+                          disabled={resetLoading}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {resetLoading ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => { setResetPasswordId(null); setNewPassword(''); }}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setResetPasswordId(admin._id); setDeleteConfirm(null); }}
+                        className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-bold uppercase tracking-wider transition-all"
+                      >
+                        Reset Password
+                      </button>
+                    )}
 
                     {deleteConfirm === admin._id ? (
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">

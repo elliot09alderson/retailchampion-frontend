@@ -140,7 +140,10 @@ export default function VIPProfile() {
 
   const fetchPackages = async () => {
       try {
-          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+          const token = localStorage.getItem('vip_token');
+          const res = await fetch(API_ENDPOINTS.PACKAGES.LIST, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
           const data = await res.json();
           if(data.success) setPackages(data.data);
       } catch(e) { console.error(e); }
@@ -148,7 +151,10 @@ export default function VIPProfile() {
 
   const fetchGallery = async () => {
     try {
-        const res = await fetch(API_ENDPOINTS.GALLERY.LIST);
+        const token = localStorage.getItem('vip_token');
+        const res = await fetch(API_ENDPOINTS.GALLERY.LIST, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const data = await res.json();
         if(data.success) setGalleryItems(data.data);
     } catch(e) { console.error(e); }
@@ -373,7 +379,13 @@ export default function VIPProfile() {
         </div>
         
         {/* Buttons Row */}
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-3 mb-4">
+            <button
+                onClick={() => navigate('/vip/products')}
+                className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2"
+            >
+                🛍️ Exclusive Products
+            </button>
             <button
                 onClick={() => setShowKYCModal(true)}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/30 flex items-center gap-2"

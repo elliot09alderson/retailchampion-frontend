@@ -16,6 +16,11 @@ import SuperAdminProtectedRoute from './components/SuperAdminProtectedRoute';
 import VIPRegistration from './pages/VIPRegistration';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import ProductManagement from './pages/ProductManagement';
+import OrderManagement from './pages/OrderManagement';
+import VIPProducts from './pages/VIPProducts';
+import BuyProduct from './pages/BuyProduct';
+import AdminOrSuperAdminRoute from './components/AdminOrSuperAdminRoute';
 
 function App() {
   return (
@@ -44,13 +49,29 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/admin/vip" 
+        <Route
+          path="/admin/vip"
           element={
             <ProtectedRoute>
               <VIPManagement />
             </ProtectedRoute>
-          } 
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <AdminOrSuperAdminRoute>
+              <ProductManagement />
+            </AdminOrSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminOrSuperAdminRoute>
+              <OrderManagement />
+            </AdminOrSuperAdminRoute>
+          }
         />
         {/* Super Admin Routes */}
         <Route path="/superadmin" element={<Navigate to="/superadmin/dashboard" replace />} />
@@ -69,6 +90,8 @@ function App() {
         <Route path="/vip/profile" element={<VIPProfile />} />
         <Route path="/vip/attendance" element={<VIPRegistration />} />
         <Route path="/vip/register" element={<VIPRegistration />} />
+        <Route path="/vip/products" element={<VIPProducts />} />
+        <Route path="/vip/products/:id/buy" element={<BuyProduct />} />
       </Routes>
     </BrowserRouter>
   );

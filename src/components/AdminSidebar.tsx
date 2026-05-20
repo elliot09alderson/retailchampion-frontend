@@ -110,9 +110,13 @@ export default function AdminSidebar({ activeView, onNavigate, user = { name: 'A
 
           <div className="p-4 border-t border-white/5">
               <div className="flex items-center gap-3 px-4 py-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
+                    {user.profilePictureUrl ? (
+                      <img src={user.profilePictureUrl} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
+                    )}
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate text-white">{user.name || 'Admin'}</p>
+                        <p className="text-sm font-bold truncate text-white">{user.organizationName || user.name || 'Admin'}</p>
                         <p className="text-[10px] text-slate-500 truncate">Admin</p>
                     </div>
               </div>

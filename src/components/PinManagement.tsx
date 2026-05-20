@@ -69,7 +69,10 @@ export default function PinManagement() {
 
   const fetchPackages = async () => {
     try {
-      const res = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_ENDPOINTS.PACKAGES.LIST, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (data.success) setPackages(data.data);
     } catch (err) {

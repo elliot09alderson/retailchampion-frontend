@@ -40,7 +40,10 @@ export default function PackagesManagement({ mode = 'all' }: PackagesManagementP
   const fetchPackages = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.PACKAGES.LIST);
+      const token = localStorage.getItem('token');
+      const response = await fetch(API_ENDPOINTS.PACKAGES.LIST, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await response.json();
       if (data.success) {
         setPackages(data.data);

@@ -16,7 +16,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Check if user is admin
   try {
     const user = JSON.parse(userStr);
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
+    if (user.role === 'superadmin') {
+      // Super Admins have their own dashboard — keep them out of the regular admin panel
+      return <Navigate to="/superadmin/dashboard" replace />;
+    }
+    if (user.role !== 'admin') {
       return <Navigate to="/admin/login" replace />;
     }
   } catch (error) {
