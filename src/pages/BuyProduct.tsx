@@ -39,7 +39,7 @@ export default function BuyProduct() {
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  const getToken = () => localStorage.getItem('vipToken') || '';
+  const getToken = () => localStorage.getItem('vip_token') || '';
 
   useEffect(() => {
     const token = getToken();

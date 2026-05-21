@@ -108,7 +108,7 @@ export default function VIPProducts() {
   const [adminProducts, setAdminProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const getToken = () => localStorage.getItem('vipToken') || '';
+  const getToken = () => localStorage.getItem('vip_token') || '';
 
   useEffect(() => {
     const token = getToken();
