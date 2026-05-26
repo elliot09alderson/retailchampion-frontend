@@ -384,6 +384,16 @@ export default function VIPManagement() {
 
   const handleRecharge = async (e: React.FormEvent) => {
       e.preventDefault();
+      // Validate a pack is available and selected
+      const packsForType = availablePacks.filter(p => p.type === rechargeData.type);
+      if (packsForType.length === 0) {
+          setMessage({ type: 'error', text: `No ${rechargeData.type} recharge packs available. Please create one first.` });
+          return;
+      }
+      if (!rechargeData.packName) {
+          setMessage({ type: 'error', text: 'Please select a referral pack before recharging.' });
+          return;
+      }
       try {
           const res = await fetch(API_ENDPOINTS.VIP.RECHARGE, {
               method: 'POST',
