@@ -104,6 +104,7 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE_URL}/api/orders`,
     LIST: `${API_BASE_URL}/api/orders`,
     UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/orders/${id}/status`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/orders/${id}`,
   },
   SUPERADMIN: {
       STATS: `${API_BASE_URL}/api/superadmin/stats`,

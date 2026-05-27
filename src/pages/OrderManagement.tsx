@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast, Toaster } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { API_ENDPOINTS } from '../config/api';
 
 interface Order {
@@ -32,13 +34,17 @@ const COLOR_NAMES: Record<string, string> = {
   '#6B7280': 'Gray',
 };
 
+const PAGE_SIZE = 15;
+
 export default function OrderManagement() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'delivered'>('all');
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [adminRole, setAdminRole] = useState<'admin' | 'superadmin'>('admin');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const getToken = () => localStorage.getItem('token') || '';
 
@@ -51,6 +57,9 @@ export default function OrderManagement() {
     } catch {}
     fetchOrders(token);
   }, []);
+
+  // Reset to page 1 whenever filter changes
+  useEffect(() => { setCurrentPage(1); }, [filter]);
 
   const fetchOrders = async (token: string) => {
     try {
@@ -89,9 +98,68 @@ export default function OrderManagement() {
     }
   };
 
+  const deleteOrder = async (order: Order) => {
+    if (!window.confirm(`Delete order for "${order.productTitle}" by ${order.customerName}?`)) return;
+    setDeletingId(order._id);
+    const token = getToken();
+    try {
+      const res = await fetch(API_ENDPOINTS.ORDERS.DELETE(order._id), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrders(prev => prev.filter(o => o._id !== order._id));
+        toast.success('Order deleted');
+      } else {
+        toast.error(data.message || 'Failed to delete');
+      }
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(16);
+    doc.text('Order Management Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Filter: ${filter.toUpperCase()}   |   Total: ${filtered.length} orders   |   Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 22);
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['#', 'Product', 'Customer', 'Phone', 'Size', 'Color', 'Qty', 'Total (₹)', 'VIP', 'Date', 'Status']],
+      body: filtered.map((o, i) => [
+        i + 1,
+        o.productTitle,
+        o.customerName,
+        o.customerPhone,
+        o.selectedSize,
+        COLOR_NAMES[o.selectedColor] || o.selectedColor,
+        o.quantity,
+        (o.productPrice * o.quantity).toLocaleString(),
+        (o.user?.vipStatus || 'vip').toUpperCase(),
+        new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        o.status.charAt(0).toUpperCase() + o.status.slice(1),
+      ]),
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 255] },
+      columnStyles: { 0: { cellWidth: 8 }, 6: { cellWidth: 10 }, 7: { cellWidth: 18 } },
+    });
+
+    doc.save(`orders-${filter}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success('PDF exported');
+  };
+
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const pendingCount = orders.filter(o => o.status === 'pending').length;
   const deliveredCount = orders.filter(o => o.status === 'delivered').length;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -108,13 +176,20 @@ export default function OrderManagement() {
           </button>
           <h1 className="text-xl font-bold text-white">Order Management</h1>
         </div>
-        <div className="flex gap-3 text-sm">
+        <div className="flex items-center gap-3 text-sm">
           <span className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-medium">
             Pending: {pendingCount}
           </span>
           <span className="px-3 py-1 rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 font-medium">
             Delivered: {deliveredCount}
           </span>
+          <button
+            onClick={exportPDF}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ↓ Export PDF
+          </button>
         </div>
       </div>
 
@@ -147,110 +222,183 @@ export default function OrderManagement() {
             <p className="text-lg">No orders found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-gray-800">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-900 border-b border-gray-800">
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">#</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Product</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Customer</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Size</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Color</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Qty</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Total</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">VIP</th>
-                  <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Date</th>
-                  <th className="px-4 py-3.5 text-center text-gray-400 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {filtered.map((order, idx) => (
-                  <tr
-                    key={order._id}
-                    className={`transition hover:bg-gray-900/50 ${
-                      order.productAdminRole === 'superadmin' ? 'bg-yellow-900/5' : 'bg-transparent'
-                    }`}
-                  >
-                    <td className="px-4 py-4 text-gray-500 font-mono text-xs">{idx + 1}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        {order.product?.imageUrl ? (
-                          <img src={order.product.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-lg">📦</div>
-                        )}
-                        <div>
-                          <p className={`font-medium leading-snug ${
-                            order.productAdminRole === 'superadmin' ? 'text-yellow-200' : 'text-white'
-                          }`}>
-                            {order.productTitle}
-                          </p>
-                          {order.productAdminRole === 'superadmin' && (
-                            <span className="text-yellow-400 text-xs">★ Super Admin</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-white font-medium">{order.customerName}</p>
-                      <p className="text-gray-500 text-xs">{order.customerPhone}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="px-2 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700 text-xs font-medium">
-                        {order.selectedSize}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1.5">
-                        {order.selectedColor && order.selectedColor !== 'N/A' && (
-                          <span
-                            className="w-4 h-4 rounded-full border border-gray-500 inline-block flex-shrink-0"
-                            style={{ backgroundColor: order.selectedColor }}
-                          />
-                        )}
-                        <span className="text-gray-300 text-xs">{COLOR_NAMES[order.selectedColor] || order.selectedColor}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-white font-semibold">{order.quantity}</td>
-                    <td className="px-4 py-4 text-white font-semibold">
-                      ₹{(order.productPrice * order.quantity).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        order.user?.vipStatus === 'vvip'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                      }`}>
-                        {(order.user?.vipStatus || 'vip').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-gray-500 text-xs whitespace-nowrap">
-                      {new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <button
-                        onClick={() => toggleStatus(order)}
-                        disabled={togglingId === order._id}
-                        className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all disabled:opacity-50 ${
-                          order.status === 'delivered'
-                            ? 'bg-green-500/20 border-green-500/40 text-green-300 hover:bg-green-500/30'
-                            : 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/30'
-                        }`}
-                      >
-                        {togglingId === order._id ? (
-                          <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
-                        ) : order.status === 'delivered' ? (
-                          <>✓ Delivered</>
-                        ) : (
-                          <>⏳ Pending</>
-                        )}
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto rounded-2xl border border-gray-800">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-900 border-b border-gray-800">
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">#</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Product</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Customer</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Size</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Color</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Qty</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Total</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">VIP</th>
+                    <th className="px-4 py-3.5 text-left text-gray-400 font-medium">Date</th>
+                    <th className="px-4 py-3.5 text-center text-gray-400 font-medium">Status</th>
+                    <th className="px-4 py-3.5 text-center text-gray-400 font-medium">Delete</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {paginated.map((order, idx) => (
+                    <tr
+                      key={order._id}
+                      className={`transition hover:bg-gray-900/50 ${
+                        order.productAdminRole === 'superadmin' ? 'bg-yellow-900/5' : 'bg-transparent'
+                      }`}
+                    >
+                      <td className="px-4 py-4 text-gray-500 font-mono text-xs">
+                        {(currentPage - 1) * PAGE_SIZE + idx + 1}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          {order.product?.imageUrl ? (
+                            <img src={order.product.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-lg">📦</div>
+                          )}
+                          <div>
+                            <p className={`font-medium leading-snug ${
+                              order.productAdminRole === 'superadmin' ? 'text-yellow-200' : 'text-white'
+                            }`}>
+                              {order.productTitle}
+                            </p>
+                            {order.productAdminRole === 'superadmin' && (
+                              <span className="text-yellow-400 text-xs">★ Super Admin</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-white font-medium">{order.customerName}</p>
+                        <p className="text-gray-500 text-xs">{order.customerPhone}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="px-2 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700 text-xs font-medium">
+                          {order.selectedSize}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-1.5">
+                          {order.selectedColor && order.selectedColor !== 'N/A' && (
+                            <span
+                              className="w-4 h-4 rounded-full border border-gray-500 inline-block flex-shrink-0"
+                              style={{ backgroundColor: order.selectedColor }}
+                            />
+                          )}
+                          <span className="text-gray-300 text-xs">{COLOR_NAMES[order.selectedColor] || order.selectedColor}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-white font-semibold">{order.quantity}</td>
+                      <td className="px-4 py-4 text-white font-semibold">
+                        ₹{(order.productPrice * order.quantity).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          order.user?.vipStatus === 'vvip'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                        }`}>
+                          {(order.user?.vipStatus || 'vip').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-gray-500 text-xs whitespace-nowrap">
+                        {new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          onClick={() => toggleStatus(order)}
+                          disabled={togglingId === order._id}
+                          className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all disabled:opacity-50 ${
+                            order.status === 'delivered'
+                              ? 'bg-green-500/20 border-green-500/40 text-green-300 hover:bg-green-500/30'
+                              : 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/30'
+                          }`}
+                        >
+                          {togglingId === order._id ? (
+                            <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                          ) : order.status === 'delivered' ? (
+                            <>✓ Delivered</>
+                          ) : (
+                            <>⏳ Pending</>
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          onClick={() => deleteOrder(order)}
+                          disabled={deletingId === order._id}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition disabled:opacity-50"
+                          title="Delete order"
+                        >
+                          {deletingId === order._id ? (
+                            <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4h6v2" />
+                            </svg>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-5">
+                <p className="text-sm text-gray-500">
+                  Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} orders
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700 text-sm disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    ← Prev
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                    .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                      if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, i) =>
+                      p === '...' ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-gray-600">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p as number)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                            currentPage === p
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700 text-sm disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
