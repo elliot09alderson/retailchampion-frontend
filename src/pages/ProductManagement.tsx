@@ -13,6 +13,7 @@ interface Product {
   price: number;
   isActive: boolean;
   createdByRole: 'admin' | 'superadmin';
+  createdByAdmin?: { _id: string; name: string; phoneNumber: string } | null;
   createdAt: string;
 }
 
@@ -38,6 +39,7 @@ export default function ProductManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [adminRole, setAdminRole] = useState<'admin' | 'superadmin'>('admin');
+  const [tooltipId, setTooltipId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -371,11 +373,40 @@ export default function ProductManagement() {
                     : 'border-gray-700 bg-gray-900'
                 }`}
               >
+                {/* Banner: Super Admin product tag */}
                 {p.createdByRole === 'superadmin' && (
                   <div className="bg-gradient-to-r from-yellow-600/30 to-yellow-400/20 px-3 py-1.5 text-yellow-300 text-xs font-semibold flex items-center gap-1">
                     ★ Super Admin Product
                   </div>
                 )}
+
+                {/* Banner: Admin product tag — only visible to superadmin */}
+                {adminRole === 'superadmin' && p.createdByRole === 'admin' && p.createdByAdmin && (
+                  <div className="bg-gradient-to-r from-indigo-600/25 to-indigo-400/10 px-3 py-1.5 flex items-center justify-between">
+                    <span className="text-indigo-300 text-xs font-semibold truncate">
+                      👤 {p.createdByAdmin.name}
+                    </span>
+                    <div className="relative flex-shrink-0 ml-2">
+                      <button
+                        onMouseEnter={() => setTooltipId(p._id)}
+                        onMouseLeave={() => setTooltipId(null)}
+                        onFocus={() => setTooltipId(p._id)}
+                        onBlur={() => setTooltipId(null)}
+                        className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400/50 text-indigo-300 text-xs font-bold flex items-center justify-center hover:bg-indigo-500/50 transition"
+                        aria-label="View admin phone number"
+                      >
+                        i
+                      </button>
+                      {tooltipId === p._id && (
+                        <div className="absolute right-0 top-7 z-20 bg-gray-800 border border-indigo-500/40 rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
+                          <p className="text-xs text-gray-400 mb-0.5">Admin Phone</p>
+                          <p className="text-sm font-semibold text-white">{p.createdByAdmin.phoneNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt={p.title} className="w-full h-40 object-cover" />
                 ) : (
