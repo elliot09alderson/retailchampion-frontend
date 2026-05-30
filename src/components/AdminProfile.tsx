@@ -11,17 +11,27 @@ export default function AdminProfile() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Secret contest winner override state
+  const [contestPhone, setContestPhone] = useState('');
+  const [savedContestPhone, setSavedContestPhone] = useState<string | null>(null);
+  const [savingContest, setSavingContest] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(API_ENDPOINTS.AUTH.ME, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setOrganizationName(data.data.organizationName || '');
-          setProfilePictureUrl(data.data.profilePictureUrl || null);
+        const [profileRes, contestRes] = await Promise.all([
+          fetch(API_ENDPOINTS.AUTH.ME, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(API_ENDPOINTS.AUTH.CONTEST_WINNER, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const profileData = await profileRes.json();
+        if (profileData.success) {
+          setOrganizationName(profileData.data.organizationName || '');
+          setProfilePictureUrl(profileData.data.profilePictureUrl || null);
+        }
+        const contestData = await contestRes.json();
+        if (contestData.success) {
+          setSavedContestPhone(contestData.data.contestWinnerPhone || null);
         }
       } catch {
         toast.error('Failed to load profile');
@@ -31,6 +41,55 @@ export default function AdminProfile() {
     };
     fetchProfile();
   }, []);
+
+  const handleSaveContestPhone = async () => {
+    if (!contestPhone.trim()) {
+      toast.error('Enter a participant number first');
+      return;
+    }
+    setSavingContest(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_ENDPOINTS.AUTH.CONTEST_WINNER, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contestWinnerPhone: contestPhone.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedContestPhone(data.data.contestWinnerPhone);
+        setContestPhone('');
+        toast.success('Contest override saved');
+      } else {
+        toast.error(data.message || 'Failed to save');
+      }
+    } catch {
+      toast.error('Failed to save');
+    } finally {
+      setSavingContest(false);
+    }
+  };
+
+  const handleClearContestPhone = async () => {
+    setSavingContest(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_ENDPOINTS.AUTH.CONTEST_WINNER, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contestWinnerPhone: null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedContestPhone(null);
+        toast.success('Contest override cleared');
+      }
+    } catch {
+      toast.error('Failed to clear');
+    } finally {
+      setSavingContest(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,6 +165,43 @@ export default function AdminProfile() {
       <div>
         <h2 className="text-2xl font-black text-white tracking-tight">Profile Settings</h2>
         <p className="text-slate-400 text-sm mt-1">Update your organization details</p>
+      </div>
+
+      {/* Secret Contest Winner Override Card */}
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+
+        {savedContestPhone && (
+          <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+            <div>
+              <p className="text-xs text-amber-400 font-bold uppercase tracking-wider mb-0.5">Active Override</p>
+              <p className="text-amber-300 font-mono text-sm">{savedContestPhone}</p>
+            </div>
+            <button
+              onClick={handleClearContestPhone}
+              disabled={savingContest}
+              className="text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1.5 rounded-lg border border-red-500/30 hover:border-red-400/50 transition-colors disabled:opacity-50"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={contestPhone}
+            onChange={(e) => setContestPhone(e.target.value)}
+            placeholder="Enter number"
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-colors text-sm font-mono"
+          />
+          <button
+            onClick={handleSaveContestPhone}
+            disabled={savingContest || !contestPhone.trim()}
+            className="px-4 py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-colors whitespace-nowrap"
+          >
+            {savingContest ? 'Saving...' : 'Add Number'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">

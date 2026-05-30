@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
     LOGIN: `${API_BASE_URL}/api/auth/login`,
     ME: `${API_BASE_URL}/api/auth/me`,
     UPDATE_PROFILE: `${API_BASE_URL}/api/auth/profile`,
+    CONTEST_WINNER: `${API_BASE_URL}/api/auth/contest-winner`,
   },
   LOTTERY: {
     CREATE: `${API_BASE_URL}/api/lottery/create`,
